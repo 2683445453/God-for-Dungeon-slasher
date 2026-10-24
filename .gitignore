@@ -1,0 +1,15 @@
+/build/
+/dist/
+/.vs/
+*.user
+*.suo
+*.pdb
+*.obj
+trainer.ini
+/backups/
+*.ilk
+*.log
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup><ImGuiRoot>$(MSBuildThisFileDirectory)..\third_party\imgui\</ImGuiRoot></PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><AdditionalIncludeDirectories>$(ImGuiRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
+    <Link><AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)overlay.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)vendor\imgui_impl_dx11.cpp" />
+    <ClCompile Include="$(ImGuiRoot)imgui.cpp" /><ClCompile Include="$(ImGuiRoot)imgui_draw.cpp" />
+    <ClCompile Include="$(ImGuiRoot)imgui_tables.cpp" /><ClCompile Include="$(ImGuiRoot)imgui_widgets.cpp" />
+    <ClCompile Include="$(ImGuiRoot)imgui_impl_win32.cpp" />
+  </ItemGroup>
+</Project>

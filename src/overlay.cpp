@@ -242,7 +242,7 @@ void DrawPanel(Shared* state) {
     bool open = true;
     if (ImGui::Begin("DUNGEON SLASHER  |  F2##trainer", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
         ImGui::TextColored(ImVec4(.25f,.8f,1,1), "单机修改面板");
-        ImGui::SameLine(); ImGui::TextDisabled("Build 26103048 / r19");
+        ImGui::SameLine(); ImGui::TextDisabled("Build 26261290 / r20");
         ImGui::TextWrapped("F2 显示 / 隐藏；关闭面板后功能继续生效。");
         ImGui::TextWrapped("开关和参数自动保存，下次连接时恢复。");
         const float footerReserve=ImGui::GetStateStorage()->GetInt(ImGui::GetID("运行统计"),0)?190.0f:100.0f;

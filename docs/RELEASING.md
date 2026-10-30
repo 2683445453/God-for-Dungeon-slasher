@@ -7,7 +7,7 @@
 在项目根目录运行：
 
 ```powershell
-./build.ps1 -SkipGameCheck -PackageName dungeon-slasher-r19
+./build.ps1 -SkipGameCheck -PackageName dungeon-slasher-r20
 ```
 
 如需同时检查已安装的游戏版本，将 `-SkipGameCheck` 替换为 `-GameDirectory '游戏安装目录'`。构建成功后，`dist` 文件夹中会生成 ZIP 和同名 SHA-256 校验文件。

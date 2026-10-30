@@ -6,13 +6,13 @@
 
 面向《DUNGEON SLASHER》Windows Steam 版的本地修改器，提供中文游戏内面板、角色与宠物解锁、货币编辑、装备和背包扩容、符文调整等功能。
 
-**当前版本：r19 · Steam Build 26103048 · Windows x64 / D3D11。** 其他游戏版本需要等待对应适配。
+**当前版本：r20 · Steam Build 26261290 · Windows x64 / D3D11。** 其他游戏版本需要等待对应适配。
 
 [下载分发版](https://github.com/2683445453/God-for-Dungeon-slasher/releases/latest) · [更新日志](CHANGELOG.md) · [详细使用说明](docs/使用说明.txt) · [问题反馈](https://github.com/2683445453/God-for-Dungeon-slasher/issues)
 
 ## 下载与启动
 
-1. 在 [Releases](https://github.com/2683445453/God-for-Dungeon-slasher/releases/latest) 下载 `dungeon-slasher-r19.zip`。页面中的 **Source code** 是源码，需要自行编译。
+1. 在 [Releases](https://github.com/2683445453/God-for-Dungeon-slasher/releases/latest) 下载 `dungeon-slasher-r20.zip`。页面中的 **Source code** 是源码，需要自行编译。
 2. 完整解压到可写文件夹，保持 `DungeonSlasherTrainer.exe` 与 `DungeonSlasher.Runtime.dll` 在一起。
 3. 启动游戏并进入主菜单，再运行 `DungeonSlasherTrainer.exe`。程序会自动检测游戏、校验版本、备份存档并连接。
 4. 保持修改器运行，可最小化。**F2** 显示或隐藏面板，**F8** 关闭全部功能；隐藏面板后已开启的功能继续生效。
@@ -23,8 +23,8 @@
 发布页同时提供同名 `.sha256` 校验文件，可使用 PowerShell 核对下载：
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\dungeon-slasher-r19.zip
-Get-Content .\dungeon-slasher-r19.sha256
+Get-FileHash -Algorithm SHA256 .\dungeon-slasher-r20.zip
+Get-Content .\dungeon-slasher-r20.sha256
 ```
 
 ## 功能

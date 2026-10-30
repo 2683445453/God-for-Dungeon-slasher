@@ -71,7 +71,7 @@ bool Verify(const fs::path& dir, std::wstring& error) {
         }
         if (Sha256(dir/L"GameAssembly.dll") != ds::AssemblySha256 ||
             Sha256(dir/L"dungeonslasher_Data"/L"il2cpp_data"/L"Metadata"/L"global-metadata.dat") != ds::MetadataSha256) {
-            error = L"游戏版本尚未适配。当前支持 Steam Build 26103048；未注入或修改游戏。"; return false;
+            error = L"游戏版本尚未适配。当前支持 Steam Build 26261290；未注入或修改游戏。"; return false;
         }
     } catch (...) { error = L"无法读取游戏文件，请检查目录和文件权限。"; return false; }
     return true;
@@ -427,7 +427,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lParam) 
         window=hwnd;
         remembered=ds::ReadPreferences((AppDir()/L"trainer.ini").c_str());
         HWND title=Control(L"STATIC",L"DUNGEON SLASHER",0,28,24,560,36); SendMessageW(title,WM_SETFONT,reinterpret_cast<WPARAM>(headingFont),TRUE);
-        Control(L"STATIC",L"独立版 r19：新角色 / 技能无冷却 / 静默重试 · Build 26103048",0,30,65,580,24);
+        Control(L"STATIC",L"独立版 r20：新角色 / 技能无冷却 / 静默重试 · Build 26261290",0,30,65,580,24);
         processLabel=Control(L"STATIC",L"游戏进程：自动检测 PID 和安装目录",0,30,105,590,24);
         pathEdit=Control(L"EDIT",L"游戏启动后自动识别安装目录",ES_AUTOHSCROLL|ES_READONLY|WS_TABSTOP,30,132,590,28,101);
         connectButton=Control(L"BUTTON",L"重新检测",BS_PUSHBUTTON|WS_TABSTOP,30,175,140,34,102);
@@ -556,7 +556,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show) {
             else error=discovery.games.empty()?L"没有正在运行的游戏。请启动游戏，或使用 --check --game-dir 指定只读检查目录。":L"检测到多个游戏进程，请只保留一个。";
         }
         bool ok=error.empty() && Verify(dir,error);
-        Output(ok?L"OK:"+automaticTarget+L" Steam Build 26103048; assembly + metadata SHA256 matched; runtime present.\n":error+L"\n"); return ok?0:1;
+        Output(ok?L"OK:"+automaticTarget+L" Steam Build 26261290; assembly + metadata SHA256 matched; runtime present.\n":error+L"\n"); return ok?0:1;
     }
     Handle single(CreateMutexW(nullptr,TRUE,L"Local\\DungeonSlasherTrainer.Controller.v1"));
     if(GetLastError()==ERROR_ALREADY_EXISTS) { if(!probe)MessageBoxW(nullptr,L"修改器已经运行，请使用已打开的窗口。",L"DUNGEON SLASHER",MB_OK); return 2; }

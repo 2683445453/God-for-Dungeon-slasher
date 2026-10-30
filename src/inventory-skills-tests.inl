@@ -55,7 +55,7 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     assert(!ApplyArtifactCapacity(owner));assert(CapacitySixValue(owner,0,method)==6);
     data.enabled=ds::ArtifactInventoryCapacity;assert(ApplyArtifactCapacity(owner));auto back=ArtiItems(owner);
     assert(ArtiInt(owner,0xac)==7&&ArtiInt(owner,0xb0)==6&&artifactTracking.backpack==12&&back.size()==26&&back[7]==old[7]&&back[19]==old[19]);
-    assert(CapacitySixValue(owner,0x103c45f,method)==12&&CapacitySixValue(nullptr,0,method)==6);
+    assert(CapacitySixValue(owner,0x103d89f,method)==12&&CapacitySixValue(nullptr,0,method)==6);
     for(int i=0;i<int(back.size());++i)assert(ArtiInt(back[i],0x18)==i);
     assert(!ArtifactFull(owner,false));for(int i=0;i<12;++i)Put(back[7+i],0x14,700+i);assert(ArtifactFull(owner,false));
     data.inventorySlots=30;assert(ApplyArtifactCapacity(owner));back=ArtiItems(owner);assert(back.size()==44&&artifactTracking.backpack==30);
@@ -89,8 +89,8 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     data.enabled=ds::SkillCapacity;frame(capacitySkillOwner,method);auto expanded=CapacitySkills(capacitySkillOwner);
     assert(skillCurrentSlots==12&&expanded.size()==26&&capacityRefreshes==1&&expanded[12]==buff&&expanded[14]==backpackItem&&expanded[0]==skills[0]&&ArtiInt(expanded[0],0x30)==8);
     for(int i=0;i<26;++i)assert(ArtiInt(expanded[i],0x10)==i);for(int i=6;i<12;++i)assert(ArtiInt(expanded[i],0x14)==-1);
-    assert(CapacitySixValue(capacitySkillOwner,0x106c788,method)==12&&CapacitySixValue(capacitySkillOwner,0x106cbd1,method)==6);
-    assert(CapacityEightValue(capacitySkillOwner,0xfb1e60,method)==14&&CapacityEightValue(owner,0xfb1e60,method)==8&&CapacityEightValue(capacitySkillOwner,0x111111,method)==8);
+    assert(CapacitySixValue(capacitySkillOwner,0x106de08,method)==12&&CapacitySixValue(capacitySkillOwner,0x106e251,method)==6);
+    assert(CapacityEightValue(capacitySkillOwner,0xfb2fa0,method)==14&&CapacityEightValue(owner,0xfb2fa0,method)==8&&CapacityEightValue(capacitySkillOwner,0x111111,method)==8);
     Put(expanded[11],0x14,111);data.skillSlots=6;frame(capacitySkillOwner,method);assert(data.skillStatus==2&&skillCurrentSlots==12&&CapacitySkills(capacitySkillOwner)[12]==buff);
     Put(expanded[11],0x14,-1);frame(capacitySkillOwner,method);assert(skillCurrentSlots==6&&CapacitySkills(capacitySkillOwner)[6]==buff&&CapacitySkills(capacitySkillOwner)[8]==backpackItem);
     data.skillSlots=30;artifactViewerOpen=true;frame(capacitySkillOwner,method);assert(data.skillStatus==3&&skillCurrentSlots==6);artifactViewerOpen=false;

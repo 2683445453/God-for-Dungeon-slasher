@@ -1,5 +1,5 @@
-DUNGEON SLASHER 修改器 r19
-适配 Steam Build 26103048；Windows x64 / D3D11
+DUNGEON SLASHER 修改器 r20
+适配 Steam Build 26261290；Windows x64 / D3D11
 
 使用方法
 1. 更新前完全退出游戏和旧修改器，再完整解压新版。

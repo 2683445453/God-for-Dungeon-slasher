@@ -2,7 +2,7 @@
 // then exercise object migration, UI callbacks and indexed save/load.
 bool CapacityNativeBuffFull(int count) {
     unsigned char bytes[]={0x8b,0xca,0,0,0,0x0f,0x9d,0xc0,0x0f,0xb6,0xc0,0xc3};
-    memcpy(bytes+2,reinterpret_cast<void*>(gameBase+0xf80848),3);
+    memcpy(bytes+2,reinterpret_cast<void*>(gameBase+0xf81a38),3);
     void* code=VirtualAlloc(nullptr,sizeof(bytes),MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);assert(code);
     memcpy(code,bytes,sizeof(bytes));DWORD old=0;assert(VirtualProtect(code,sizeof(bytes),PAGE_EXECUTE_READ,&old));
     FlushInstructionCache(GetCurrentProcess(),code,sizeof(bytes));
@@ -12,7 +12,7 @@ bool CapacityNativeBuffFull(int count) {
 bool CapacityNativeBuffSwap(int index,bool second) {
     // Preserve the native lea eax,[rdi/rbx-normal] and cmp eax,buffs-1.
     std::vector<unsigned char> bytes{static_cast<unsigned char>(second?0x53:0x57),0x8b,static_cast<unsigned char>(second?0xd9:0xf9)};
-    auto* native=reinterpret_cast<unsigned char*>(gameBase+(second?0xfab9d9:0xfab94f));
+    auto* native=reinterpret_cast<unsigned char*>(gameBase+(second?0xfacb19:0xfaca8f));
     bytes.insert(bytes.end(),native,native+6);
     bytes.insert(bytes.end(),{0x0f,0x96,0xc0,0x0f,0xb6,0xc0,static_cast<unsigned char>(second?0x5b:0x5f),0xc3});
     void* code=VirtualAlloc(nullptr,bytes.size(),MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);assert(code);
@@ -58,7 +58,7 @@ void ExpandedCapacityTests(ds::Shared& data,const void* method) {
     assert(skillCurrentSlots==6&&skillCurrentBuffSlots==6&&skillCurrentBackpack==6&&grown.size()==24);
     assert(grown[6]==native[6]&&grown[7]==native[7]&&grown[12]==native[8]&&ArtiInt(grown[12],0x3c)==7);
     for(int i=8;i<12;++i)assert(ArtiInt(grown[i],0x14)==-1);
-    assert(CapacityEightValue(capacitySkillOwner,0x1087f98,method)==12&&CapacityEightValue(artiOwner,0x1087f98,method)==8);
+    assert(CapacityEightValue(capacitySkillOwner,0x1089658,method)==12&&CapacityEightValue(artiOwner,0x1089658,method)==8);
     assert(MH_CreateHook(reinterpret_cast<void*>(&CapacityBuffUiFixture),reinterpret_cast<void*>(&OnViewerSkillBuffEquipInit),reinterpret_cast<void**>(&originalViewerSkillBuffEquipInit))==MH_OK);
     assert(MH_EnableHook(reinterpret_cast<void*>(&CapacityBuffUiFixture))==MH_OK);
     originalSkillBuffEquipInit=originalViewerSkillBuffEquipInit;

@@ -55,7 +55,7 @@ def main():
             records.append((row["name"], rva))
             if name == "wallet-profile.inl" and row["name"] and "/" in row["name"]:
                 wallet_records.append((row["name"], rva))
-    assert len(records) == 300, f"Expected full r19 profile, got {len(records)} records"
+    assert len(records) == 300, f"Expected full r20 profile, got {len(records)} records"
     assert len(wallet_records) == 53
     capacity_profile = (ROOT / "src/capacity-profile.inl").read_text(encoding="utf-8")
     operands = list(re.finditer(r'\{0x([0-9a-f]+),(\d+),(\d+),(-?\d+),-?\d+,\{', capacity_profile))

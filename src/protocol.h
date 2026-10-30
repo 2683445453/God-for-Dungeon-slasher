@@ -17,7 +17,7 @@
 
 namespace ds {
 constexpr DWORD Magic = 0x44535452;
-constexpr DWORD Version = 18;
+constexpr DWORD Version = 19;
 constexpr int MaxMultiplier = 1000000; // fixed point, 1000 = 1x; up to 1000x
 constexpr int MaxGoldGain = 1000000;
 constexpr int MaxSinPoints = 7 * 20;
@@ -106,7 +106,7 @@ inline int ScaleReward(int value, int multiplier, int room = INT_MAX) {
     return ClampRewardGain(ScalePositive(value, multiplier), room);
 }
 inline void MappingName(wchar_t (&name)[96], DWORD pid) {
-    swprintf_s(name, L"Local\\DungeonSlasherTrainer.v18.%lu", pid);
+    swprintf_s(name, L"Local\\DungeonSlasherTrainer.v19.%lu", pid);
 }
 inline void Disable(Shared* state) { if (state) { Set(state->enabled, 0); Set(state->unlockCommand,0);InterlockedCompareExchange(&state->unlockStatus,0,1);Set(state->walletCommand,0);InterlockedCompareExchange(&state->walletStatus,0,1); } }
 inline bool RequestWallet(Shared* state) {

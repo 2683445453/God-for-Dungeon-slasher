@@ -3,11 +3,11 @@
 int CapacityNativePick(const std::vector<int>& ids,bool buff) {
     std::vector<unsigned char> bytes{0x53};
     auto native=[&](uintptr_t r,size_t count){auto* p=reinterpret_cast<unsigned char*>(gameBase+r);bytes.insert(bytes.end(),p,p+count);};
-    if(buff)native(0xfb4133,5);else {bytes.push_back(0x33);bytes.push_back(0xdb);}
+    if(buff)native(0xfb2ec3,5);else {bytes.push_back(0x33);bytes.push_back(0xdb);}
     size_t loop=bytes.size();for(auto b:{0x83,0x3c,0x99,0xff,0x74,0})bytes.push_back(static_cast<unsigned char>(b));size_t found=bytes.size()-1;
-    bytes.insert(bytes.end(),{0xff,0xc3});native(buff?0xfb4188:0xfb40c8,3);
+    bytes.insert(bytes.end(),{0xff,0xc3});native(buff?0xfb2f18:0xfb2e58,3);
     bytes.push_back(0x7c);bytes.push_back(static_cast<unsigned char>(int(loop)-int(bytes.size()+1)));
-    native(buff?0xfb4191:0xfb40d1,5);size_t done=bytes.size();bytes[found]=static_cast<unsigned char>(done-(found+1));
+    native(buff?0xfb2f21:0xfb2e61,5);size_t done=bytes.size();bytes[found]=static_cast<unsigned char>(done-(found+1));
     bytes.insert(bytes.end(),{0x8b,0xc3,0x5b,0xc3});
     void* code=VirtualAlloc(nullptr,bytes.size(),MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);assert(code);memcpy(code,bytes.data(),bytes.size());
     DWORD old=0;assert(VirtualProtect(code,bytes.size(),PAGE_EXECUTE_READ,&old));FlushInstructionCache(GetCurrentProcess(),code,bytes.size());
@@ -69,12 +69,12 @@ void R11AcquisitionTests(ds::Shared& data,const void* method) {
         for(int i=0;i<n;++i)ids[i]=100+i;assert(CapacityNativePick(ids,false)==n+2&&CapacityNativePick(ids,true)==n);
         ids[n]=600;assert(CapacityNativePick(ids,true)==n+1);ids[n+1]=601;assert(CapacityNativePick(ids,true)==n+2);
         ids[n-1]=-1;assert(CapacityNativePick(ids,false)==n-1);assert(CapacityNativePick(ids,true)==n+2);
-        assert(!CapacityNativeFull(0xf8d00b,b-1)&&CapacityNativeFull(0xf8d00b,b));
-        assert(!CapacityNativeFull(0xf8d02b,b,true)&&CapacityNativeFull(0xf8d02b,b+1,true));
+        assert(!CapacityNativeFull(0xf8bd9b,b-1)&&CapacityNativeFull(0xf8bd9b,b));
+        assert(!CapacityNativeFull(0xf8bdbb,b,true)&&CapacityNativeFull(0xf8bdbb,b+1,true));
     }
     assert(SetSkillNativeLimit(30,30));
-    assert(CapacitySixValue(capacitySkillOwner,0x1078051,method)==30&&CapacitySixValue(capacitySkillOwner,0x114ea2c,method)==30);
-    assert(CapacitySixValue(capacitySkillOwner,0x123456,method)==6&&CapacitySixValue(artiOwner,0x1078051,method)==6);
+    assert(CapacitySixValue(capacitySkillOwner,0x1076de1,method)==30&&CapacitySixValue(capacitySkillOwner,0x114d7bc,method)==30);
+    assert(CapacitySixValue(capacitySkillOwner,0x123456,method)==6&&CapacitySixValue(artiOwner,0x1076de1,method)==6);
     checkArtifactAllPool=checkSkillAllPool=CapacityAllPool;checkSkillInventoryPool=CapacityPool;
     originalSkillLevelListInit=CapacityLevelUiFixture;originalSkillInventoryInit=originalViewerSkillInventoryInit=CapacityBackUiFixture;
     for(auto entry:{std::pair<void*,void*>{reinterpret_cast<void*>(&CapacityAllUiFixture),reinterpret_cast<void*>(&OnArtifactAllListInit)},

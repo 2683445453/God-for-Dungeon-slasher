@@ -4,7 +4,7 @@ param(
     [string]$GameDirectory,
     [switch]$SkipGameCheck,
     [ValidatePattern('^[a-z0-9][a-z0-9-]{0,63}$')]
-    [string]$PackageName = 'dungeon-slasher-r22'
+    [string]$PackageName = 'dungeon-slasher-r25'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $SkipGameCheck) {
@@ -19,6 +19,18 @@ $compileDirectory = Join-Path $projectDirectory "build\bin\$PackageName"
 $logDirectory = Join-Path $projectDirectory 'build\logs'
 $packageDirectory = Join-Path $projectDirectory "dist\$PackageName"
 New-Item -ItemType Directory -Path $compileDirectory,$logDirectory,$packageDirectory -Force | Out-Null
+$skinPath = Join-Path $projectDirectory 'build\native-ui.bin'
+if (-not $SkipGameCheck) {
+    & python (Join-Path $projectDirectory 'tools\extract-game-ui.py') --game-dir $GameDirectory --output $skinPath
+    if ($LASTEXITCODE -ne 0) { throw 'Native game UI extraction failed. Install Python dependency UnityPy==1.25.4.' }
+}
+if (Test-Path -LiteralPath $skinPath) {
+    Copy-Item -LiteralPath $skinPath -Destination (Join-Path $compileDirectory 'native-ui.bin') -Force
+    New-Item -ItemType Directory -Path (Join-Path $projectDirectory 'build\tests') -Force | Out-Null
+    Copy-Item -LiteralPath $skinPath -Destination (Join-Path $projectDirectory 'build\tests\native-ui.bin') -Force
+} else {
+    Write-Warning 'Source-only build: native game art is unavailable; panel uses its fallback skin.'
+}
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio C++ Build Tools and Windows SDK are required.' }
 $installations = @(& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json | ConvertFrom-Json)
@@ -42,7 +54,7 @@ if ($SkipGameCheck) {
     Get-Content -LiteralPath (Join-Path $logDirectory 'game-check.log') -Encoding utf8
     if ($check.ExitCode -ne 0) { throw 'Installed-game compatibility check failed.' }
 }
-# Package only the six runtime files. Debug symbols, INI and backups stay local.
+# Personal native skin is extracted from the installed game; never checked into source.
 $releaseFiles = [ordered]@{
     'DungeonSlasherTrainer.exe' = Join-Path $compileDirectory 'DungeonSlasherTrainer.exe'
     'DungeonSlasher.Runtime.dll' = Join-Path $compileDirectory 'DungeonSlasher.Runtime.dll'
@@ -51,6 +63,7 @@ $releaseFiles = [ordered]@{
     'LICENSE.ImGui.txt' = Join-Path $projectDirectory 'third_party\imgui\LICENSE.txt'
     'LICENSE.Project.txt' = Join-Path $projectDirectory 'LICENSE'
 }
+if (Test-Path -LiteralPath $skinPath) { $releaseFiles['native-ui.bin'] = $skinPath }
 foreach ($entry in $releaseFiles.GetEnumerator()) {
     Copy-Item -LiteralPath $entry.Value -Destination (Join-Path $packageDirectory $entry.Key) -Force
 }

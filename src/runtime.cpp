@@ -3,6 +3,8 @@
 #include "MinHook.h"
 #ifndef DS_RUNTIME_TEST
 #include "overlay.h"
+#include "preferences.h"
+#include <filesystem>
 #endif
 #include <cstdio>
 #include <cstring>
@@ -184,6 +186,8 @@ bool __fastcall OnCharacter(void* self, int character, const void* method) {
     bool owned = originalCharacter(self, character, method);
     return UnlockResult(owned, !owned && ds::Active(shared, ds::Characters) && CharacterData(character));
 }
+// Lobby background ownership only. Furniture/NPC category toggles are disabled
+// in the game prefab and do not use this ownership check.
 bool __fastcall OnLobby(void* self, int skin, const void* method) {
     bool owned = originalLobby(self, skin, method);
     return UnlockResult(owned, !owned && ds::Active(shared, ds::Skins) && skin >= -1 && skin <= 4);
@@ -543,11 +547,26 @@ DWORD WINAPI Worker(void*) {
     if (!overlay) ds::Set(shared->overlayState, -1);
     wcsncpy_s(shared->message, overlay ? L"77 个游戏入口已校验；技能无冷却 / 自动重试；F2 打开面板。" : L"功能可用，但 D3D11 面板安装失败。请重启游戏。", _TRUNCATE);
     ds::Set(shared->available, ds::All); ds::Set(shared->state, ds::Ready);
-    // The DLL stays resident. Closing the controller makes hooks pass through;
-    // we never free trampolines while a game thread could still be executing one.
+    HMODULE runtime=nullptr;
+    wchar_t runtimePath[32768]{};
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCWSTR>(&Worker), &runtime);
+    GetModuleFileNameW(runtime,runtimePath,DWORD(std::size(runtimePath)));
+    const auto preferencesPath=std::filesystem::path(runtimePath).parent_path()/L"trainer.ini";
+    auto remembered=ds::ReadPreferences(preferencesPath.c_str());
+    // The resident worker owns the heartbeat and preferences after launcher handoff.
+    // Hooks remain allocated until game exit, including when all features are off.
     for (;;) {
         ds::Set(shared->runtimeHeartbeat, LONG(GetTickCount()));
-        if (!ds::Fresh(GetTickCount(), DWORD(ds::Read(shared->clientHeartbeat)))) ds::Disable(shared);
+        if (ds::Read(shared->ownerPid)==LONG(GetCurrentProcessId())) {
+            ds::Set(shared->clientHeartbeat,LONG(GetTickCount()));
+            auto next=ds::SnapshotPreferences(shared);
+            if (!(next==remembered)) {
+                if(ds::WritePreferences(preferencesPath.c_str(),next)) {
+                    remembered=next; ds::Set(shared->preferencesError,0);
+                } else ds::Set(shared->preferencesError,1);
+            }
+        } else if (!ds::Fresh(GetTickCount(), DWORD(ds::Read(shared->clientHeartbeat)))) ds::Disable(shared);
         Sleep(100);
     }
 }

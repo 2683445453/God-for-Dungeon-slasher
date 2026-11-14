@@ -15,6 +15,7 @@
 #pragma comment(lib, "dxgi.lib")
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 using Microsoft::WRL::ComPtr;
+#include "native-skin.h"
 namespace {
 using Present = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
 using Resize = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
@@ -34,6 +35,7 @@ ComPtr<ID3D11RenderTargetView> target;
 // Keep a reference while using this swap chain. No arbitrary hot-unload.
 ComPtr<IDXGISwapChain> activeChain;
 ImGuiContext* gui = nullptr;
+ImVec2 panelScreen{};
 HWND gameWindow = nullptr;
 std::unordered_map<HWND,WNDPROC> previousProcs;
 struct Message { HWND window; UINT message; WPARAM w; LPARAM l; };
@@ -95,6 +97,7 @@ void Cleanup() {
         ImGui::SetCurrentContext(gui);
         ImGui_ImplDX11_Shutdown(); ImGui_ImplWin32_Shutdown(); ImGui::DestroyContext(gui); gui = nullptr;
     }
+    nativeui::Clear();panelScreen=ImVec2();
     input.clear(); target.Reset(); context.Reset(); device.Reset(); activeChain.Reset();
 }
 bool Initialize(IDXGISwapChain* chain) {
@@ -110,21 +113,40 @@ bool Initialize(IDXGISwapChain* chain) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // Never change the game's OS cursor. Draw a cursor only while the panel is open.
     io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-    wchar_t windows[32768]; char font[32768];
-    if (GetWindowsDirectoryW(windows, DWORD(std::size(windows)))) {
-        wcscat_s(windows, L"\\Fonts\\msyh.ttc");
-        WideCharToMultiByte(CP_UTF8, 0, windows, -1, font, int(std::size(font)), nullptr, nullptr);
-        io.Fonts->AddFontFromFileTTF(font, 19.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
+    if(nativeui::Load(device.Get())) {
+        ImFontConfig config;config.FontDataOwnedByAtlas=false;
+        io.Fonts->AddFontFromMemoryTTF(nativeui::font.data(),int(nativeui::font.size()),24.0f,&config,io.Fonts->GetGlyphRangesChineseFull());
+    } else {
+        wchar_t windows[32768];char fontPath[32768];
+        if(GetWindowsDirectoryW(windows,DWORD(std::size(windows)))) {
+            wcscat_s(windows,L"\\Fonts\\msyhbd.ttc");
+            WideCharToMultiByte(CP_UTF8,0,windows,-1,fontPath,int(std::size(fontPath)),nullptr,nullptr);
+            io.Fonts->AddFontFromFileTTF(fontPath,24.0f,nullptr,io.Fonts->GetGlyphRangesChineseFull());
+        }
     }
-    if (io.Fonts->Fonts.empty()) io.Fonts->AddFontDefault();
+    if(io.Fonts->Fonts.empty())io.Fonts->AddFontDefault();
     ImGui::StyleColorsDark(); auto& style = ImGui::GetStyle();
-    style.WindowRounding = 12; style.FrameRounding = 6; style.GrabRounding = 6;
-    style.WindowPadding = ImVec2(22, 18); style.FramePadding = ImVec2(9, 7);
-    style.ItemSpacing = ImVec2(12, 10); style.WindowBorderSize = 1;
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(.045f,.065f,.10f,.98f);
-    style.Colors[ImGuiCol_CheckMark] = ImVec4(.24f,.78f,1,.95f);
-    style.Colors[ImGuiCol_Button] = ImVec4(.12f,.31f,.48f,1);
-    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(.18f,.45f,.64f,1);
+    style.WindowRounding = 0; style.FrameRounding = 0; style.GrabRounding = 0;
+    style.TabRounding = 0; style.ScrollbarRounding = 0;
+    style.WindowPadding = ImVec2(24, 18); style.FramePadding = ImVec2(9, 7);
+    style.ItemSpacing = ImVec2(12, 10); style.WindowBorderSize = 2; style.FrameBorderSize = 1;
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(.025f,.022f,.035f,.96f);
+    style.Colors[ImGuiCol_Text] = ImVec4(.96f,.95f,.91f,1);
+    style.Colors[ImGuiCol_TextDisabled] = ImVec4(.62f,.60f,.58f,1);
+    style.Colors[ImGuiCol_Border] = ImVec4(.72f,.70f,.65f,1);
+    style.Colors[ImGuiCol_CheckMark] = ImVec4(.95f,.80f,.40f,1);
+    style.Colors[ImGuiCol_FrameBg] = ImVec4(.08f,.07f,.10f,1);
+    style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(.24f,.20f,.12f,1);
+    style.Colors[ImGuiCol_FrameBgActive] = ImVec4(.34f,.27f,.12f,1);
+    style.Colors[ImGuiCol_Button] = ImVec4(.09f,.08f,.10f,1);
+    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(.32f,.26f,.13f,1);
+    style.Colors[ImGuiCol_ButtonActive] = ImVec4(.44f,.34f,.14f,1);
+    style.Colors[ImGuiCol_Tab] = ImVec4(.08f,.07f,.10f,1);
+    style.Colors[ImGuiCol_TabHovered] = ImVec4(.32f,.26f,.13f,1);
+    style.Colors[ImGuiCol_TabSelected] = ImVec4(.38f,.29f,.12f,1);
+    style.Colors[ImGuiCol_Separator] = ImVec4(.65f,.60f,.45f,.65f);
+    style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(.025f,.022f,.035f,1);
+    style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(.48f,.44f,.34f,1);
     gameWindow = desc.OutputWindow;
     if (!ImGui_ImplWin32_Init(gameWindow)) {
         ImGui::DestroyContext(gui); gui = nullptr; target.Reset(); context.Reset(); device.Reset(); gameWindow = nullptr; return false;
@@ -221,178 +243,176 @@ HRESULT STDMETHODCALLTYPE OnResize(IDXGISwapChain* chain, UINT count, UINT width
     if (chain == activeChain.Get()) target.Reset();
     return originalResize(chain, count, width, height, format, flags);
 }
-void Toggle(ds::Shared* state, const char* label, ds::Feature feature) {
-    bool on = (ds::Read(state->enabled) & feature) != 0;
-    if (ImGui::Checkbox(label, &on)) ds::SetFeature(state, feature, on);
+void Toggle(ds::Shared* state,const char* label,ds::Feature feature) {
+    bool on=(ds::Read(state->enabled)&feature)!=0;
+    bool available=(ds::Read(state->available)&feature)!=0;
+    ImGui::BeginDisabled(!available);
+    const ImVec2 at=ImGui::GetCursorScreenPos();
+    const float side=ImGui::GetFrameHeight();
+    nativeui::Image(nativeui::Slot,at,ImVec2(at.x+side,at.y+side));
+    if(on)nativeui::Image(nativeui::Check,ImVec2(at.x+nativeui::S(6),at.y+nativeui::S(6)),
+        ImVec2(at.x+side-nativeui::S(6),at.y+side-nativeui::S(6)));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,ImVec4(0,0,0,0));
+    ImGui::PushStyleColor(ImGuiCol_CheckMark,ImVec4(0,0,0,0));
+    ImGui::PushStyleColor(ImGuiCol_CheckboxSelectedBg,ImVec4(0,0,0,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+    if(ImGui::Checkbox(label,&on))ds::SetFeature(state,feature,on);
+    ImGui::PopStyleVar();ImGui::PopStyleColor(3);ImGui::EndDisabled();
 }
-void Multiplier(ds::Shared* state, const char* label, ds::Feature feature, volatile LONG& field) {
-    Toggle(state, label, feature); ImGui::SameLine(300); ImGui::PushID(label);
-    float value = ds::Read(field) / 1000.0f;
-    ImGui::SetNextItemWidth(150);
-    if (ImGui::InputFloat("##factor", &value, .5f, 10, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue) && std::isfinite(value))
-        ds::Set(field, ds::NormalizeMultiplier(int(std::lround(std::clamp(value,.1f,1000.0f) * 1000))));
-    ImGui::SameLine(); ImGui::TextUnformatted("倍"); ImGui::PopID();
+void Multiplier(ds::Shared* state,const char* label,ds::Feature feature,volatile LONG& field) {
+    Toggle(state,label,feature);ImGui::SameLine(ImGui::GetWindowWidth()-nativeui::S(270));ImGui::PushID(label);
+    float value=ds::Read(field)/1000.0f;ImGui::SetNextItemWidth(nativeui::S(205));
+    if(ImGui::InputFloat("##factor",&value,.5f,10,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue)&&std::isfinite(value))
+        ds::Set(field,ds::NormalizeMultiplier(int(std::lround(std::clamp(value,.1f,1000.0f)*1000))));
+    ImGui::SameLine();ImGui::TextUnformatted("倍");ImGui::PopID();
 }
+void Capacity(ds::Shared* state,const char* label,ds::Feature feature,volatile LONG& value,
+              volatile LONG& occupied,volatile LONG& allowed,volatile LONG& status) {
+    Toggle(state,label,feature);ImGui::SameLine(ImGui::GetWindowWidth()-nativeui::S(270));
+    ImGui::PushID(label);int count=ds::Read(value);ImGui::SetNextItemWidth(nativeui::S(205));
+    if(ImGui::InputInt("##slots",&count,1,5,ImGuiInputTextFlags_EnterReturnsTrue))ds::Set(value,std::clamp(count,6,50));
+    ImGui::TextDisabled("已使用 %ld / %ld",ds::Read(occupied),ds::Read(allowed));
+    if(ds::Read(status)==2)ImGui::TextWrapped("请先移走超额物品。");
+    if(ds::Read(status)==3)ImGui::TextWrapped("关闭游戏角色或装备窗口后应用。");
+    if(ds::Read(status)<0)ImGui::TextWrapped("容量读取失败，请重启游戏后先注入再继续。");
+    ImGui::PopID();
+}
+
 }
 namespace ds {
 void DrawPanel(Shared* state) {
-    auto& io = ImGui::GetIO();
-    ImGui::SetNextWindowPos(ImVec2(30,30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(std::min(580.0f,io.DisplaySize.x-16), std::min(790.0f,io.DisplaySize.y-60)), ImGuiCond_Always);
-    bool open = true;
-    if (ImGui::Begin("DUNGEON SLASHER  |  F2##trainer", &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
-        ImGui::TextColored(ImVec4(.25f,.8f,1,1), "单机修改面板");
-        ImGui::SameLine(); ImGui::TextDisabled("Build 26534205 / r22");
-        ImGui::TextWrapped("F2 显示 / 隐藏；关闭面板后功能继续生效。");
-        ImGui::TextWrapped("开关和参数自动保存，下次连接时恢复。");
-        const float footerReserve=ImGui::GetStateStorage()->GetInt(ImGui::GetID("运行统计"),0)?190.0f:100.0f;
-        if(ImGui::BeginTabBar("Features")) {
-        if(ImGui::BeginTabItem("常用功能")) {
-        ImGui::BeginChild("CommonControls",ImVec2(0,-footerReserve));
-        ImGui::SeparatorText("战斗与奖励");
-        Toggle(state, "无敌", God);
-        ImGui::SameLine(300);Toggle(state,"无技能冷却时间",NoCooldown);
-        Multiplier(state,"伤害倍率", Damage, state->damageMultiplier);
-        Multiplier(state,"金币获取倍率", Gold, state->goldMultiplier);
-        Multiplier(state,"结算奖励倍率", Reward, state->rewardMultiplier);
-        Multiplier(state,"符文分解粉末倍率", RunePowder, state->runePowderMultiplier);
-        Multiplier(state,"钻石领取倍率", Diamond, state->diamondMultiplier);
-        ImGui::TextDisabled("倍率 0.1–1000；输入后回车，+/− 按钮即时应用。");
-        ImGui::TextWrapped("钻石独立倍率开启时优先于结算倍率；消费不变。粉末包含手动及溢出分解。");
-        ImGui::SeparatorText("移动");
-        Toggle(state,"无限冲刺", InfiniteDash); ImGui::SameLine(300); Toggle(state,"无限跳跃",InfiniteJump);
-        ImGui::TextWrapped("使用原冲刺 / 跳跃按键；补足冲刺次数，空中可重复跳跃。");
-        Toggle(state,"连接错误静默自动重试",AutoRetry);
-        ImGui::TextDisabled("后台重试：等待 %ld 项 / 已发起 %ld 次",Read(state->syncPending),Read(state->syncRetries));
-        ImGui::TextWrapped("连接超时在后台延时重试，保留原生保存及完成回调。关闭后待重试项恢复手动提示。");
-        ImGui::SeparatorText("圣器背包");
-        Toggle(state,"自定义背包上限",ArtifactInventoryCapacity);ImGui::SameLine(300);
-        int backSlots=Read(state->inventorySlots);ImGui::SetNextItemWidth(150);
-        if(ImGui::InputInt("##inventorySlots",&backSlots,1,5,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->inventorySlots,std::clamp(backSlots,MinInventorySlots,MaxInventorySlots));
-        ImGui::TextDisabled("6–50；背包圣器 %ld / %ld",Read(state->inventoryOccupied),Read(state->inventoryAllowed));
-        if(Read(state->inventoryStatus)==2)ImGui::TextWrapped("等待移走或拆卸超额背包物品，现有物品会保留。");
-        if(Read(state->inventoryStatus)==3)ImGui::TextWrapped("关闭角色 / 圣器选择窗口后自动应用。");
-        ImGui::SeparatorText("技能装备");
-        Toggle(state,"自定义普通技能上限",SkillCapacity);ImGui::SameLine(300);
-        int skillSlots=Read(state->skillSlots);ImGui::SetNextItemWidth(150);
-        if(ImGui::InputInt("##skillSlots",&skillSlots,1,5,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->skillSlots,std::clamp(skillSlots,MinSkillSlots,MaxSkillSlots));
-        ImGui::TextDisabled("6–50；普通技能 %ld / %ld",Read(state->skillEquipped),Read(state->skillAllowed));
-        if(Read(state->skillStatus)==2)ImGui::TextWrapped("等待卸下超额普通技能，增益技能和背包会保留。");
-        if(Read(state->skillStatus)==3)ImGui::TextWrapped("关闭角色 / 技能窗口后自动应用。");
-        if(Read(state->skillStatus)<0)ImGui::TextWrapped("技能适配失败；续局读取失败时已暂停自动存档，请重启并先连接修改器。");
-        Toggle(state,"增益技能6格",BuffCapacity);
-        ImGui::TextDisabled("增益技能 %ld / %ld",Read(state->buffEquipped),Read(state->buffAllowed));
-        if(Read(state->buffStatus)==2)ImGui::TextWrapped("等待卸下第3–6格增益技能，现有技能会保留。");
-        if(Read(state->buffStatus)==3)ImGui::TextWrapped("关闭角色 / 技能窗口后自动应用。");
-        if(Read(state->buffStatus)<0)ImGui::TextWrapped("增益技能适配失败，请关闭原生窗口后重试。");
-        ImGui::SeparatorText("技能背包");
-        Toggle(state,"自定义技能背包上限",SkillInventoryCapacity);ImGui::SameLine(300);
-        int skillBackSlots=Read(state->skillInventorySlots);ImGui::SetNextItemWidth(150);
-        if(ImGui::InputInt("##skillInventorySlots",&skillBackSlots,1,5,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->skillInventorySlots,std::clamp(skillBackSlots,MinInventorySlots,MaxInventorySlots));
-        ImGui::TextDisabled("6–50；背包技能 %ld / %ld",Read(state->skillInventoryOccupied),Read(state->skillInventoryAllowed));
-        if(Read(state->skillInventoryStatus)==2)ImGui::TextWrapped("等待移走或用作材料消耗超额技能，现有技能会保留。");
-        if(Read(state->skillInventoryStatus)==3)ImGui::TextWrapped("关闭角色 / 技能窗口后自动应用。");
-        if(Read(state->skillInventoryStatus)<0)ImGui::TextWrapped("技能背包适配失败，请关闭原生窗口后重试。");
-        ImGui::SeparatorText("圣器装备");
-        Toggle(state,"自定义装备上限", ArtifactCapacity);ImGui::SameLine(300);
-        int slots=Read(state->artifactSlots);ImGui::SetNextItemWidth(150);
-        if(ImGui::InputInt("##artifactSlots",&slots,1,5,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->artifactSlots,std::clamp(slots,MinArtifactSlots,MaxArtifactSlots));
-        ImGui::TextWrapped("6–50；关闭角色 / 圣器窗口后应用。保留原生替换、拆卸和换位。");
-        ImGui::TextDisabled("当前装备 %ld / %ld；物理格子 %ld",Read(state->artifactEquipped),Read(state->artifactAllowed),Read(state->artifactPhysicalSlots));
-        if(Read(state->artifactStatus)==2)ImGui::TextColored(ImVec4(1,.7f,.3f,1),"等待拆卸超额圣器，已装备物品会保留。");
-        if(Read(state->artifactStatus)==3)ImGui::TextColored(ImVec4(1,.7f,.3f,1),"请关闭游戏的角色 / 圣器选择窗口后应用。");
-        if(Read(state->artifactStatus)==-1)ImGui::TextColored(ImVec4(1,.4f,.4f,1),"圣器界面适配失败，请关闭原生窗口后重试。");
-        if(Read(state->artifactStatus)==-2)ImGui::TextWrapped("续局圣器读取失败，已暂停自动存档。请重启游戏、连接修改器后再继续。");
-        ImGui::SeparatorText("罪恶点数");
-        Toggle(state,"自定义罪恶总点数", Sin); ImGui::SameLine(300);
-        int points = Read(state->sinPoints);
-        ImGui::SetNextItemWidth(150);
-        if (ImGui::InputInt("##sinPoints", &points, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
-            Set(state->sinPoints, std::clamp(points, 0, MaxSinPoints));
-        ImGui::TextWrapped("0–140 点；回车应用后重开罪恶分配页。各项最多 20 点。");
-        ImGui::SeparatorText("本地解锁");
-        Toggle(state,"全部角色", Characters); ImGui::SameLine(300); Toggle(state,"全部皮肤",Skins);
-        Toggle(state,"全部武器", Weapons); ImGui::SameLine(300); Toggle(state,"全部宠物",Pets);
-        ImGui::TextWrapped("开启后重新进入选择界面。仅解锁已实装资源，关闭后恢复原有归属判断。");
-        ImGui::TextDisabled("本地解锁不会在商店中生成购买记录。");
-        const LONG unlockStatus=Read(state->unlockStatus);
-        ImGui::BeginDisabled(unlockStatus==1 || unlockStatus==2);
-        if(ImGui::Button("一键解锁全部技能和圣器",ImVec2(490,36)))RequestUnlockAll(state);
-        ImGui::EndDisabled();
-        ImGui::TextWrapped("写入本地解锁存档；完成后重新进入图鉴 / 选择界面查看。");
-        if(unlockStatus==1 || unlockStatus==2)ImGui::TextWrapped("正在等待游戏就绪并处理，请稍候……");
-        if(unlockStatus==3)ImGui::TextWrapped("完成：技能 %ld 个，圣器 %ld 个（含原已解锁项）。",Read(state->unlockedSkills),Read(state->unlockedArtifacts));
-        if(unlockStatus<0) {
-            ImGui::TextWrapped("解锁失败：%s（代码 %ld）。",UnlockErrorLabel(Read(state->unlockError)),Read(state->unlockError));
-            ImGui::TextWrapped("已处理技能 %ld / 圣器 %ld；修正原因后可重试。",Read(state->unlockedSkills),Read(state->unlockedArtifacts));
+    using namespace nativeui;
+    auto& io=ImGui::GetIO();scale=std::clamp(io.DisplaySize.y/1080.0f,.8f,1.65f);
+    const ImVec2 size(std::min(S(1080),io.DisplaySize.x-S(32)),std::min(S(780),io.DisplaySize.y-S(40)));
+    const bool resized=panelScreen.x!=io.DisplaySize.x||panelScreen.y!=io.DisplaySize.y;
+    panelScreen=io.DisplaySize;
+    ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x-size.x)*.5f,(io.DisplaySize.y-size.y)*.5f),resized?ImGuiCond_Always:ImGuiCond_FirstUseEver);
+    ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0),io.DisplaySize,IM_COL32(0,0,0,115));
+    ImGui::SetNextWindowSize(size,ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,Size(26,22));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,Size(9,8));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,Size(14,14));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,0);
+    ImGui::PushFont(nullptr,S(30));
+    bool open=true;
+    if(ImGui::Begin("DUNGEON SLASHER  |  F2##trainer",nullptr,ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoScrollbar)) {
+        Image(SlotBold,ImGui::GetWindowPos(),ImVec2(ImGui::GetWindowPos().x+size.x,ImGui::GetWindowPos().y+size.y));
+        Corners(ImGui::GetWindowPos(),ImVec2(ImGui::GetWindowPos().x+size.x,ImGui::GetWindowPos().y+size.y));
+        const ImVec2 heading=ImGui::GetCursorScreenPos();
+        const float width=ImGui::GetContentRegionAvail().x;
+        auto* draw=ImGui::GetWindowDrawList();
+        draw->AddRectFilledMultiColor(heading,ImVec2(heading.x+width,heading.y+S(70)),
+            IM_COL32(167,119,30,170),IM_COL32(45,43,52,0),IM_COL32(45,43,52,0),IM_COL32(167,119,30,100));
+        Text(ImVec2(heading.x+S(18),heading.y+S(7)),"冒险设置",S(44));
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth()-S(164));
+        if(Button("返回  F2",Size(138,54)))open=false;
+        ImGui::SetCursorScreenPos(ImVec2(heading.x,heading.y+S(86)));
+        const char* pages[]={"战斗与收益","装备与背包","角色与解锁","符文调整","货币编辑"};
+        int page=std::clamp(ImGui::GetStateStorage()->GetInt(ImGui::GetID("Page"),0),0,4);
+        ImGui::BeginChild("Navigation",ImVec2(S(208),ImGui::GetContentRegionAvail().y-S(6)),ImGuiChildFlags_None,ImGuiWindowFlags_NoScrollbar);
+        for(int i=0;i<5;++i) {
+            ImGui::PushID(i);
+            if(Button(pages[i],Size(196,64),page==i))page=i;
+            ImGui::PopID();
         }
-        ImGui::EndChild();ImGui::EndTabItem();
+        ImGui::EndChild();ImGui::SameLine();
+        ImGui::GetStateStorage()->SetInt(ImGui::GetID("Page"),page);
+        ImGui::BeginGroup();
+        ImGui::PushFont(nullptr,S(28));ImGui::TextUnformatted(pages[page]);ImGui::PopFont();
+        ImGui::Separator();
+        if(page==4) {
+            const char* warning="直接编辑货币可能造成账号封禁，请谨慎使用。";
+            const float padding=S(14),wrap=ImGui::GetContentRegionAvail().x-padding*2;
+            const float height=padding*2+ImGui::GetTextLineHeight()+ImGui::GetStyle().ItemSpacing.y+ImGui::CalcTextSize(warning,nullptr,false,wrap).y;
+            ImGui::PushStyleColor(ImGuiCol_ChildBg,ImVec4(.24f,.065f,.04f,1));
+            ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(1,.46f,.16f,1));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(padding,padding));
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding,S(8));
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize,S(2));
+            ImGui::BeginChild("WalletRisk",ImVec2(0,height),ImGuiChildFlags_Borders,ImGuiWindowFlags_NoScrollbar);
+            ImGui::TextColored(ImVec4(1,.65f,.22f,1),"账号封禁风险");
+            ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(1,.9f,.76f,1));
+            ImGui::TextWrapped("%s",warning);
+            ImGui::PopStyleColor();ImGui::EndChild();
+            ImGui::PopStyleVar(3);ImGui::PopStyleColor(2);
         }
-        if(ImGui::BeginTabItem("符文重铸与掉落")) {
-            ImGui::BeginChild("RuneControls",ImVec2(0,-footerReserve));
-            ImGui::SeparatorText("精炼 / 重铸");
-            Toggle(state,"重铸属性取当前品质最高值",RuneMaximum);
-            ImGui::TextWrapped("保留品质和锁定属性，材料正常消耗。");
-            ImGui::SeparatorText("挑战模式符文");
-            Toggle(state,"自定义符文掉落率",ChallengeRate);
+        ImGui::BeginChild("FeatureContent",ImVec2(0,-S(104)));
+        if(page==0) {
+            Toggle(state,"无敌",God);Toggle(state,"技能无冷却",NoCooldown);
+            Multiplier(state,"伤害倍率",Damage,state->damageMultiplier);
+            Multiplier(state,"金币获取倍率",Gold,state->goldMultiplier);
+            Multiplier(state,"结算奖励倍率",Reward,state->rewardMultiplier);
+            Multiplier(state,"符文粉末倍率",RunePowder,state->runePowderMultiplier);
+            Multiplier(state,"钻石领取倍率",Diamond,state->diamondMultiplier);
+            Toggle(state,"无限冲刺",InfiniteDash);Toggle(state,"无限跳跃",InfiniteJump);
+            Toggle(state,"连接失败自动重试",AutoRetry);
+        } else if(page==1) {
+            Capacity(state,"圣器装备格数",ArtifactCapacity,state->artifactSlots,state->artifactEquipped,state->artifactAllowed,state->artifactStatus);
+            Capacity(state,"圣器背包格数",ArtifactInventoryCapacity,state->inventorySlots,state->inventoryOccupied,state->inventoryAllowed,state->inventoryStatus);
+            Capacity(state,"普通技能装备格数",SkillCapacity,state->skillSlots,state->skillEquipped,state->skillAllowed,state->skillStatus);
+            Capacity(state,"技能背包格数",SkillInventoryCapacity,state->skillInventorySlots,state->skillInventoryOccupied,state->skillInventoryAllowed,state->skillInventoryStatus);
+            Toggle(state,"增益技能扩展至 6 格",BuffCapacity);
+            if(Read(state->buffStatus)==2)ImGui::TextWrapped("请先卸下超额增益技能。");
+            if(Read(state->buffStatus)==3)ImGui::TextWrapped("关闭游戏角色或技能窗口后应用。");
+            if(Read(state->buffStatus)<0)ImGui::TextWrapped("增益技能容量读取失败。");
+        } else if(page==2) {
+            Toggle(state,"解锁全部角色",Characters);Toggle(state,"解锁角色皮肤与大厅背景",Skins);
+            Toggle(state,"解锁全部武器",Weapons);Toggle(state,"解锁全部宠物",Pets);
+            ImGui::Separator();Toggle(state,"自定义罪恶总点数",Sin);
+            int points=Read(state->sinPoints);ImGui::SetNextItemWidth(S(260));
+            if(ImGui::InputInt("总点数",&points,1,10,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->sinPoints,std::clamp(points,0,MaxSinPoints));
+            ImGui::Separator();const LONG status=Read(state->unlockStatus);
+            ImGui::BeginDisabled(status==1||status==2);
+            if(Button("解锁全部技能和圣器",Size(480,58),true))RequestUnlockAll(state);
+            ImGui::EndDisabled();
+            if(status==1||status==2)ImGui::TextUnformatted("正在解锁……");
+            if(status==3)ImGui::TextWrapped("已解锁：技能 %ld / 圣器 %ld",Read(state->unlockedSkills),Read(state->unlockedArtifacts));
+            if(status<0)ImGui::TextWrapped("解锁失败：%s",UnlockErrorLabel(Read(state->unlockError)));
+        } else if(page==3) {
+            Toggle(state,"符文重铸与精炼最高值",RuneMaximum);
+            ImGui::Separator();Toggle(state,"自定义挑战符文掉落率",ChallengeRate);
             float normal=Read(state->challengeNormalChance)/100.0f,boss=Read(state->challengeBossChance)/100.0f;
-            ImGui::SetNextItemWidth(220);
-            if(ImGui::InputFloat("普通怪概率 (%)",&normal,1,10,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue) && std::isfinite(normal))Set(state->challengeNormalChance,LONG(std::lround(std::clamp(normal,0.0f,100.0f)*100)));
-            ImGui::SetNextItemWidth(220);
-            if(ImGui::InputFloat("首领概率 (%)",&boss,1,10,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue) && std::isfinite(boss))Set(state->challengeBossChance,LONG(std::lround(std::clamp(boss,0.0f,100.0f)*100)));
-            Toggle(state,"增加每次掉落符文数量",ChallengeQuantity);
-            int quantity=Read(state->challengeQuantity);ImGui::SetNextItemWidth(220);
+            ImGui::SetNextItemWidth(S(260));
+            if(ImGui::InputFloat("普通怪 (%)",&normal,1,10,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue)&&std::isfinite(normal))Set(state->challengeNormalChance,LONG(std::lround(std::clamp(normal,0.0f,100.0f)*100)));
+            ImGui::SetNextItemWidth(S(260));
+            if(ImGui::InputFloat("首领 (%)",&boss,1,10,"%.2f",ImGuiInputTextFlags_EnterReturnsTrue)&&std::isfinite(boss))Set(state->challengeBossChance,LONG(std::lround(std::clamp(boss,0.0f,100.0f)*100)));
+            ImGui::Separator();Toggle(state,"增加符文掉落数量",ChallengeQuantity);
+            int quantity=Read(state->challengeQuantity);ImGui::SetNextItemWidth(S(260));
             if(ImGui::InputInt("数量倍率",&quantity,1,5,ImGuiInputTextFlags_EnterReturnsTrue))Set(state->challengeQuantity,std::clamp(quantity,1,MaxChallengeQuantity));
-            ImGui::TextDisabled("概率 0–100%%；数量 1–20 倍。输入后回车应用。");
-            if(ImGui::CollapsingHeader("说明与数量限制")) {
-                ImGui::TextWrapped("精炼数值和重铸新属性取当前品质最高档位，保持颜色和锁定属性。原生通常为普通怪 0.02%%、首领 1%%，保留品质权重和掉落资格。");
-                ImGui::TextWrapped("先成功掉落，再生成额外符文。待结算达到 2000 个时停止额外生成；背包溢出仍按原生规则分解。");
-                ImGui::TextDisabled("属性调整 %lld 次；额外符文 %lld 个",Read64(state->runeMaxDraws),Read64(state->challengeExtraRunes));
-            }
-            ImGui::EndChild();ImGui::EndTabItem();
-        }
-        if(ImGui::BeginTabItem("所有货币")) {
-            ImGui::BeginChild("WalletControls",ImVec2(0,-footerReserve));
-            ImGui::TextWrapped("选择货币，输入目标余额，再点击应用。仅记住输入值，下次连接不会自动修改余额。");
+        } else {
             int selected=std::clamp(int(Read(state->walletSelection)),0,WalletCount-1);
-            ImGui::SetNextItemWidth(490);
+            ImGui::SetNextItemWidth(-S(18));
             if(ImGui::BeginCombo("##wallet",Wallets[selected].label)) {
                 for(int i=0;i<WalletCount;++i) {
-                    if(ImGui::Selectable(Wallets[i].label,i==selected)) {Set(state->walletSelection,i);selected=i;}
+                    if(ImGui::Selectable(Wallets[i].label,i==selected)){Set(state->walletSelection,i);selected=i;}
                     if(i==selected)ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
-            if(Read(state->walletReadIndex)==selected && Read(state->walletReadStatus)==1)ImGui::Text("当前余额：%ld",Read(state->walletBalance));
-            else ImGui::TextDisabled("等待游戏读取余额（本局金币需进入关卡）");
-            if(Read(state->walletReadIndex)==selected && Read(state->walletReadStatus)==1 && Read(state->walletBalance)<0)
-                ImGui::TextWrapped("检测到负余额，可直接输入正常目标值并应用修复。");
-            int64_t target=Read(state->walletTargets[selected]);const int64_t step=1,fastStep=100;ImGui::SetNextItemWidth(300);
-            if(ImGui::InputScalar("目标余额",ImGuiDataType_S64,&target,&step,&fastStep,"%lld",ImGuiInputTextFlags_EnterReturnsTrue))Set(state->walletTargets[selected],LONG(std::clamp<int64_t>(target,0,INT_MAX)));
-            ImGui::TextDisabled("范围 0–2,147,483,647；输入后回车确认。");
-            const LONG status=Read(state->walletStatus);
-            ImGui::BeginDisabled(status==1 || status==2);
-            if(ImGui::Button("应用所选货币余额",ImVec2(300,36)))RequestWallet(state);
+            ImGui::Spacing();
+            if(Read(state->walletReadIndex)==selected&&Read(state->walletReadStatus)==1)ImGui::Text("当前余额：%ld",Read(state->walletBalance));
+            else ImGui::TextDisabled("等待游戏读取余额");
+            int64_t balance=Read(state->walletTargets[selected]);const int64_t step=1,fast=100;
+            ImGui::SetNextItemWidth(S(330));
+            if(ImGui::InputScalar("目标余额",ImGuiDataType_S64,&balance,&step,&fast,"%lld",ImGuiInputTextFlags_EnterReturnsTrue))Set(state->walletTargets[selected],LONG(std::clamp<int64_t>(balance,0,INT_MAX)));
+            ImGui::Spacing();const LONG status=Read(state->walletStatus);
+            ImGui::BeginDisabled(status==1||status==2);
+            if(Button("应用货币余额",Size(380,64),true))RequestWallet(state);
             ImGui::EndDisabled();
-            if(status==1 || status==2)ImGui::TextWrapped("正在游戏主线程处理……");
-            if(status==3 && ValidWallet(Read(state->walletRequestIndex)))ImGui::TextWrapped("已应用：%s → %ld",Wallets[Read(state->walletRequestIndex)].label,Read(state->walletRequestTarget));
+            if(status==1||status==2)ImGui::TextUnformatted("正在应用……");
+            if(status==3&&ValidWallet(Read(state->walletRequestIndex)))ImGui::TextWrapped("已应用：%s → %ld",Wallets[Read(state->walletRequestIndex)].label,Read(state->walletRequestTarget));
             if(status<0)ImGui::TextWrapped("应用失败：%s",WalletErrorLabel(Read(state->walletError)));
-            ImGui::TextWrapped("通过游戏原生接口更新并写入本地存档；手动余额不叠加领取倍率。金币仅属于本局，活动币按年份分别保存，过期活动不会因此重新开放。");
-            ImGui::EndChild();ImGui::EndTabItem();
         }
-        ImGui::EndTabBar();
-        }
+        ImGui::EndChild();
         ImGui::Separator();
-        if (ImGui::Button("全部关闭  F8",ImVec2(235,36))) Disable(state);
-        ImGui::SameLine(); if (ImGui::Button("隐藏面板  F2",ImVec2(235,36))) open=false;
-        if(ImGui::CollapsingHeader("运行统计")) {
-        ImGui::TextDisabled("拦截受伤 %lld 次   调整伤害 %lld 次", Read64(state->godHits), Read64(state->damageHits));
-        ImGui::TextDisabled("金币 %ld → %ld   奖励 %ld → %ld",Read(state->lastGoldBefore),Read(state->lastGoldAfter),Read(state->lastRewardBefore),Read(state->lastRewardAfter));
-        ImGui::TextDisabled("本地解锁判断 %lld 次",Read64(state->unlockHits));
-        ImGui::TextDisabled("补充冲刺次数 %lld 次   补充跳跃次数 %lld 次",Read64(state->dashRefills),Read64(state->jumpRefills));
-        }
+        const float buttonWidth=(ImGui::GetContentRegionAvail().x-S(14))*.5f;
+        if(Button("全部关闭  F8",ImVec2(buttonWidth,S(56))))Disable(state);
+        ImGui::SameLine();if(Button("返回游戏  F2",ImVec2(buttonWidth,S(56))))open=false;
+        if(Read(state->preferencesError))ImGui::TextColored(ImVec4(1,.6f,.3f,1),"设置保存失败，请检查目录权限。");
+        ImGui::EndGroup();
     }
-    ImGui::End(); if (!open) Set(state->panelVisible, 0);
+    ImGui::End();ImGui::PopFont();ImGui::PopStyleVar(4);
+    if(!open)Set(state->panelVisible,0);
 }
 bool InstallOverlay(Shared* state) {
     control = state;

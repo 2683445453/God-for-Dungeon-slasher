@@ -38,7 +38,7 @@ inline Discovery FindGames(const wchar_t* image = L"dungeonslasher.exe") {
     Discovery result;
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot == INVALID_HANDLE_VALUE) {
-        result.error = L"无法扫描游戏进程，点击“重新检测”重试。"; return result;
+        result.error = L"无法扫描游戏进程，重新运行修改器重试。"; return result;
     }
     PROCESSENTRY32W entry{}; entry.dwSize = sizeof(entry);
     BOOL found = Process32FirstW(snapshot, &entry);
@@ -50,16 +50,16 @@ inline Discovery FindGames(const wchar_t* image = L"dungeonslasher.exe") {
         if (!entry.cntThreads || _wcsicmp(entry.szExeFile, image) != 0) continue;
         HANDLE candidate = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, entry.th32ProcessID);
         if (!candidate) {
-            if (GetLastError() == ERROR_ACCESS_DENIED) result.error = L"无法读取游戏进程。请让游戏和修改器使用相同权限运行，再点击“重新检测”。";
+            if (GetLastError() == ERROR_ACCESS_DENIED) result.error = L"无法读取游戏进程。请让游戏和修改器使用相同权限运行，再重新运行修改器。";
             continue;
         }
         Process identity;
         if (Identify(candidate, identity, image)) result.games.push_back(std::move(identity));
         else if (WaitForSingleObject(candidate, 0) == WAIT_TIMEOUT)
-            result.error = L"无法确认正在运行的游戏路径，请点击“重新检测”重试。";
+            result.error = L"无法确认正在运行的游戏路径，请重新运行修改器重试。";
         CloseHandle(candidate);
     }
-    if (GetLastError() != ERROR_NO_MORE_FILES) result.error = L"无法完整读取游戏进程列表，请点击“重新检测”重试。";
+    if (GetLastError() != ERROR_NO_MORE_FILES) result.error = L"无法完整读取游戏进程列表，请重新运行修改器重试。";
     CloseHandle(snapshot);
     return result;
 }

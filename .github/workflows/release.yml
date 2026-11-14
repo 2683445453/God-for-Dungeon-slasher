@@ -37,15 +37,28 @@ jobs:
           path: build/logs/
           if-no-files-found: warn
           retention-days: 14
-      - name: Publish ZIP and SHA-256 checksum
+      - name: Verify locally prepared assets and publish draft
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create $env:RELEASE_TAG `
-            "dist/dungeon-slasher-$env:RELEASE_TAG.zip" `
-            "dist/dungeon-slasher-$env:RELEASE_TAG.sha256" `
-            --verify-tag --title "DUNGEON SLASHER $env:RELEASE_TAG" `
-            --notes-file CHANGELOG.md
+          $assetDirectory = Join-Path $PWD 'build/release-assets'
+          New-Item -ItemType Directory -Path $assetDirectory -Force | Out-Null
+          gh release download $env:RELEASE_TAG --dir $assetDirectory
+          if ($LASTEXITCODE -ne 0) { throw 'Prepare a draft release with the locally verified native-skin ZIP and checksum before pushing the tag.' }
+          $name = "dungeon-slasher-$env:RELEASE_TAG"
+          $zip = Join-Path $assetDirectory "$name.zip"
+          $expected = (Get-Content -LiteralPath (Join-Path $assetDirectory "$name.sha256") -Raw).Trim()
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($expected -cne "$actual  $name.zip") { throw 'Release checksum mismatch.' }
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            $required = @('DungeonSlasherTrainer.exe','DungeonSlasher.Runtime.dll','native-ui.bin','使用说明.txt','LICENSE.MinHook.txt','LICENSE.ImGui.txt','LICENSE.Project.txt')
+            if ($archive.Entries.Count -ne $required.Count) { throw 'Unexpected release ZIP file count.' }
+            foreach ($entry in $archive.Entries) {
+              if ($entry.FullName -notin $required -or $entry.Length -eq 0) { throw 'Unexpected or empty release file.' }
+            }
+          } finally { $archive.Dispose() }
+          gh release edit $env:RELEASE_TAG --draft=false --latest
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

@@ -44,8 +44,8 @@ void OverlaySmokeTest() {
     ComPtr<ID3D11RenderTargetView> restored;context->OMGetRenderTargets(1,&restored,nullptr);assert(restored.Get()==target.Get());restored.Reset();
     // Inspect the unlock controls below the fold in the actual rendered
     // panel. This remains a hidden WARP fixture, without desktop input.
-    auto* panel=ImGui::FindWindowByName("DUNGEON SLASHER  |  F2##trainer");assert(panel && panel->DC.ChildWindows.Size==1);
-    auto* common=panel->DC.ChildWindows[0];assert(common->ScrollMax.y>400 && panel->ScrollMax.y==0);
+    auto* panel=ImGui::FindWindowByName("DUNGEON SLASHER  |  F2##trainer");assert(panel && panel->DC.ChildWindows.Size==2);
+    auto* common=panel->DC.ChildWindows[1];assert(common->ScrollMax.y>0 && panel->ScrollMax.y==0);
     ImGui::SetScrollY(common,common->ScrollMax.y);context->ClearRenderTargetView(view,clear);state.clientHeartbeat=LONG(GetTickCount());
     assert(SUCCEEDED(chain->Present(0,0))&&state.overlayFrames==3);
     D3D11_TEXTURE2D_DESC texture{};buffer->GetDesc(&texture);texture.Usage=D3D11_USAGE_STAGING;texture.BindFlags=0;texture.CPUAccessFlags=D3D11_CPU_ACCESS_READ;texture.MiscFlags=0;
@@ -87,7 +87,7 @@ void OverlaySmokeTest() {
     ComPtr<IDXGISwapChain> replacement;
     assert(SUCCEEDED(D3D11CreateDeviceAndSwapChain(nullptr,D3D_DRIVER_TYPE_WARP,nullptr,0,nullptr,0,D3D11_SDK_VERSION,&desc,&replacement,nullptr,nullptr,nullptr)));
     state.clientHeartbeat=LONG(GetTickCount());replacement->Present(0,0);assert(state.overlayFrames==frames+2);
-    // Select both new tabs in the hidden renderer. No desktop mouse/keyboard
+    // Select every native-style category in the hidden renderer. No desktop mouse/keyboard
     // or real game process participates in this UI verification.
     ComPtr<ID3D11Device> previewDevice;ComPtr<ID3D11DeviceContext> previewContext;ComPtr<ID3D11Texture2D> previewBuffer,previewStaging;ComPtr<ID3D11RenderTargetView> previewView;
     assert(SUCCEEDED(replacement->GetDevice(IID_PPV_ARGS(&previewDevice))));previewDevice->GetImmediateContext(&previewContext);
@@ -98,14 +98,13 @@ void OverlaySmokeTest() {
     state.challengeNormalChance=1000;state.challengeBossChance=5000;state.challengeQuantity=3;state.enabled|=ds::RuneMaximum|ds::ChallengeRate|ds::ChallengeQuantity;
     state.walletSelection=0;state.walletTargets[0]=100000;state.walletReadIndex=0;state.walletReadStatus=1;state.walletBalance=INT_MIN;
     state.enabled|=ds::NoCooldown|ds::AutoRetry;
-    for(int captureIndex:{0,3,1,2}) {
-        const int tabIndex=captureIndex==3?0:captureIndex;
+    for(int tabIndex:{0,1,2,3,4}) {
         auto* root=ImGui::FindWindowByName("DUNGEON SLASHER  |  F2##trainer");assert(root);
-        auto* tabs=ImGui::GetCurrentContext()->TabBars.GetByKey(root->GetID("Features"));assert(tabs && tabs->Tabs.Size==3);
-        const auto tabId=tabs->Tabs[tabIndex].ID;tabs->NextSelectedTabId=tabId;
-        if(tabIndex==0)for(auto* child:root->DC.ChildWindows)ImGui::SetScrollY(child,captureIndex==3?650.0f:0.0f);
+        root->StateStorage.SetInt(root->GetID("Page"),tabIndex);
+        for(auto* child:root->DC.ChildWindows)ImGui::SetScrollY(child,0);
         for(int frame=0;frame<2;++frame){previewContext->ClearRenderTargetView(previewView.Get(),clear);state.clientHeartbeat=LONG(GetTickCount());assert(SUCCEEDED(replacement->Present(0,0)));}
-        assert(tabs->SelectedTabId==tabId && root->ScrollMax.y==0);
+        assert(root->StateStorage.GetInt(root->GetID("Page"))==tabIndex && root->ScrollMax.y==0);
+        assert(root->Pos.x>=0 && root->Pos.y>=0 && root->Pos.x+root->Size.x<=ImGui::GetIO().DisplaySize.x+1 && root->Pos.y+root->Size.y<=ImGui::GetIO().DisplaySize.y+1);
         previewContext->CopyResource(previewStaging.Get(),previewBuffer.Get());D3D11_MAPPED_SUBRESOURCE previewPixels{};
         assert(SUCCEEDED(previewContext->Map(previewStaging.Get(),0,D3D11_MAP_READ,0,&previewPixels)));
         std::vector<unsigned char> bytes(previewDesc.Width*previewDesc.Height*4);
@@ -115,11 +114,36 @@ void OverlaySmokeTest() {
             bytes[to]=from[2];bytes[to+1]=from[1];bytes[to+2]=from[0];bytes[to+3]=255;
         }
         previewContext->Unmap(previewStaging.Get(),0);
-        auto tabFile=file.parent_path()/(captureIndex==3?L"panel-capacity.bmp":tabIndex==0?L"panel-common.bmp":tabIndex==1?L"panel-runes.bmp":L"panel-wallet.bmp");
+        auto tabFile=file.parent_path()/(tabIndex==0?L"panel-common.bmp":tabIndex==1?L"panel-capacity.bmp":tabIndex==2?L"panel-unlocks.bmp":tabIndex==3?L"panel-runes.bmp":L"panel-wallet.bmp");
         BITMAPFILEHEADER bmp{};bmp.bfType=0x4d42;bmp.bfOffBits=sizeof(bmp)+sizeof(BITMAPINFOHEADER);bmp.bfSize=bmp.bfOffBits+DWORD(bytes.size());
         BITMAPINFOHEADER layout{};layout.biSize=sizeof(layout);layout.biWidth=LONG(previewDesc.Width);layout.biHeight=LONG(previewDesc.Height);layout.biPlanes=1;layout.biBitCount=32;
         std::ofstream capture(tabFile,std::ios::binary);capture.write(reinterpret_cast<char*>(&bmp),sizeof(bmp));capture.write(reinterpret_cast<char*>(&layout),sizeof(layout));capture.write(reinterpret_cast<char*>(bytes.data()),bytes.size());assert(capture.good());
     }
+    // Exercise layout and category activation at real game aspect ratios,
+    // independently of the hidden Win32 fixture's client rectangle.
+    auto& io=ImGui::GetIO();
+    auto layoutFrame=[&](ImVec2 screen) {
+        io.DisplaySize=screen;io.DeltaTime=1.0f/60;
+        ImGui::NewFrame();ds::DrawPanel(&state);ImGui::Render();
+    };
+    for(ImVec2 screen:{ImVec2(800,600),ImVec2(1280,720),ImVec2(1920,1080),ImVec2(2560,1600)}) {
+        for(int page=0;page<5;++page) {
+            auto* root=ImGui::FindWindowByName("DUNGEON SLASHER  |  F2##trainer");
+            root->StateStorage.SetInt(root->GetID("Page"),page);
+            layoutFrame(screen);layoutFrame(screen);
+            assert(root->ScrollMax.y==0 && root->ScrollMax.x==0);
+            assert(root->Pos.x>=0 && root->Pos.y>=0 && root->Pos.x+root->Size.x<=screen.x+1 && root->Pos.y+root->Size.y<=screen.y+1);
+            for(auto* child:root->DC.ChildWindows)assert(child->ScrollMax.x==0);
+        }
+    }
+    auto* root=ImGui::FindWindowByName("DUNGEON SLASHER  |  F2##trainer");
+    auto* nav=root->DC.ChildWindows[0];
+    const ImVec2 click(nav->Pos.x+60,nav->Pos.y+30);
+    io.AddMousePosEvent(click.x,click.y);layoutFrame(ImVec2(2560,1600));
+    io.AddMouseButtonEvent(0,true);layoutFrame(ImVec2(2560,1600));
+    io.AddMouseButtonEvent(0,false);layoutFrame(ImVec2(2560,1600));
+    assert(root->StateStorage.GetInt(root->GetID("Page"))==0);
+    std::cout<<"PASS: five native-style categories, sidebar mouse activation, 800x600/720p/1080p/1600p layout and viewport bounds\n";
     previewView.Reset();previewStaging.Reset();previewBuffer.Reset();previewContext.Reset();previewDevice.Reset();
     ds::RemoveOverlayHooks();assert(MH_Uninitialize()==MH_OK);
     replacement.Reset();

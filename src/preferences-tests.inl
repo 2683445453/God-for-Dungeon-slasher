@@ -40,5 +40,5 @@ void PreferencesTests() {
     assert(DeleteFileW(name));
     assert(WritePrivateProfileStringW(L"Sync",L"AutoRetry",nullptr,name));
     assert((ds::ReadPreferences(name).enabled&ds::AutoRetry)!=0);
-    std::cout<<"PASS: INI preferences for 23 toggles including six buff slots, all four capacities up to 50, legacy quiet-retry default and explicit all-off, multipliers/challenge and 41 wallet targets, malformed values, availability mask, no command replay\n";
+    std::cout<<"PASS: INI preferences for 23 toggles including six buff slots, all four capacities up to 50, legacy quiet-retry default and explicit all-off, multipliers/challenge and 42 wallet targets, malformed values, availability mask, no command replay\n";
 }

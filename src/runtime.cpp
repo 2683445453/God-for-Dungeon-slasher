@@ -109,23 +109,23 @@ void RefillMovement(void* self) {
     if(!self)return;
     if(ds::Active(shared,ds::NoCooldown) && refillWeaponCooldown) {
         float timer=0;int count=0;
-        if(Field(self,0x620,timer) && Field(self,0x628,count) && (timer>0 || count<=0))
+        if(Field(self,0x628,timer) && Field(self,0x630,count) && (timer>0 || count<=0))
             refillWeaponCooldown(self,nullptr);
     }
     if(ds::Active(shared,ds::InfiniteDash) && getMaxDashCount) {
         int current=0;
-        if(Field(self,0x630,current)) {
+        if(Field(self,0x638,current)) {
             const int maximum=getMaxDashCount(self,nullptr);
-            if(maximum>0 && current<maximum && WriteField(self,0x630,maximum))InterlockedIncrement64(&shared->dashRefills);
+            if(maximum>0 && current<maximum && WriteField(self,0x638,maximum))InterlockedIncrement64(&shared->dashRefills);
         }
     }
     if(ds::Active(shared,ds::InfiniteJump) && encodeMovementInt && decodeMovementInt) {
         ObscuredIntBytes current{};
-        if(Field(self,0x4c4,current) && decodeMovementInt(&current,nullptr)<=0) {
+        if(Field(self,0x4cc,current) && decodeMovementInt(&current,nullptr)<=0) {
             ObscuredIntBytes refill{};
             // Construct a valid encrypted integer; never overwrite ciphertext
             // with a plain int or invoke the reset's eventInGround callbacks.
-            if(encodeMovementInt(&refill,1,nullptr)==&refill && WriteField(self,0x4c4,refill))InterlockedIncrement64(&shared->jumpRefills);
+            if(encodeMovementInt(&refill,1,nullptr)==&refill && WriteField(self,0x4cc,refill))InterlockedIncrement64(&shared->jumpRefills);
         }
     }
 }
@@ -275,7 +275,16 @@ int RewardValue(int value, int factor, int room = INT_MAX) {
 // GetClearReward inlines the gem read too. Give each operation a single factor,
 // then restore the buffers: repeated preview/claim queries cannot compound them.
 struct RewardBuffers { int prayer, soul, breach, gem; };
-static_assert(sizeof(RewardBuffers) == 16);
+// PlayerData stores another reward between the breach stone and gem fields.
+constexpr size_t RunGemOffset = 0x228;
+bool ReadRewardBuffers(void* player, RewardBuffers& values) {
+    return Field(player,0x218,values.prayer) && Field(player,0x21c,values.soul) &&
+        Field(player,0x220,values.breach) && Field(player,RunGemOffset,values.gem);
+}
+bool WriteRewardBuffers(void* player, const RewardBuffers& values) {
+    return WriteField(player,RunGemOffset,values.gem) && WriteField(player,0x218,values.prayer) &&
+        WriteField(player,0x21c,values.soul) && WriteField(player,0x220,values.breach);
+}
 class SettlementScope;
 thread_local SettlementScope* settlement = nullptr;
 class SettlementScope {
@@ -296,18 +305,21 @@ public:
         protectBalance(multiplier != 1000 || ds::Active(shared,ds::Reward) || diamondActive) {
         if (settlement || !getPlayerData) return;
         player = getPlayerData(nullptr);
-        if (!Field(player, 0x218, raw)) return;
+        if (!ReadRewardBuffers(player, raw)) return;
         if (protectBalance) limits = CurrentRewardLimits();
         shown = { ds::ScaleReward(raw.prayer, factor, limits[0]), ds::ScaleReward(raw.soul, factor, limits[1]),
             ds::ScaleReward(raw.breach, factor, limits[2]), ds::ScaleReward(raw.gem, gemFactor, limits[3]) };
-        if (!WriteField(player, 0x218, shown)) return;
+        if (!WriteRewardBuffers(player, shown)) {
+            WriteRewardBuffers(player, raw);
+            return;
+        }
         entered = true; settlement = this;
     }
     ~SettlementScope() {
         if (!entered) return;
         // Preserve changes the original operation made (e.g. clearing a buffer).
         Restore(0x218, raw.prayer, shown.prayer); Restore(0x21c, raw.soul, shown.soul);
-        Restore(0x220, raw.breach, shown.breach); Restore(0x224, raw.gem, shown.gem);
+        Restore(0x220, raw.breach, shown.breach); Restore(RunGemOffset, raw.gem, shown.gem);
         settlement = nullptr;
     }
     void Restore(size_t offset, int before, int temporary) {

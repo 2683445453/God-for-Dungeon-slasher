@@ -70,7 +70,7 @@ bool Verify(const fs::path& dir, std::wstring& error) {
         }
         if (Sha256(dir/L"GameAssembly.dll") != ds::AssemblySha256 ||
             Sha256(dir/L"dungeonslasher_Data"/L"il2cpp_data"/L"Metadata"/L"global-metadata.dat") != ds::MetadataSha256) {
-            error = L"游戏版本尚未适配。当前支持 Steam Build 26534205；未注入或修改游戏。"; return false;
+            error = L"游戏版本尚未适配。当前支持 Steam Build 26725751；未注入或修改游戏。"; return false;
         }
     } catch (...) { error = L"无法读取游戏文件，请检查目录和文件权限。"; return false; }
     return true;
@@ -230,7 +230,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,LPWSTR,int) {
             else error=discovery.games.empty()?L"没有正在运行的游戏。请启动游戏，或使用 --check --game-dir 指定只读检查目录。":L"检测到多个游戏进程，请只保留一个。";
         }
         bool ok=error.empty() && Verify(dir,error);
-        Output(ok?L"OK:"+automaticTarget+L" Steam Build 26534205; assembly + metadata SHA256 matched; runtime present.\n":error+L"\n"); return ok?0:1;
+        Output(ok?L"OK:"+automaticTarget+L" Steam Build 26725751; assembly + metadata SHA256 matched; runtime present.\n":error+L"\n"); return ok?0:1;
     }
     Handle single(CreateMutexW(nullptr,TRUE,L"Local\\DungeonSlasherTrainer.Controller.v1"));
     if(GetLastError()==ERROR_ALREADY_EXISTS) { if(!probe)MessageBoxW(nullptr,L"修改器正在注入，请稍候。",L"DUNGEON SLASHER",MB_OK); return 2; }

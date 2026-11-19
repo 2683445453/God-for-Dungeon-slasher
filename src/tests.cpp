@@ -60,23 +60,24 @@ int __fastcall BreachBufferStub(void*,const void*) { return StoneStub(0x220); }
 int __fastcall SinStub(void* s,const void* m) { selfSeen=s;methodSeen=m;return sinBase; }
 __declspec(noinline) void __fastcall PreviewFixture(void* s,const void* m) {
     ++previewCalls; selfSeen=s; methodSeen=m;
-    assert(Field(playerBuffer,0x218,displayedBase));
+    assert(ReadRewardBuffers(playerBuffer,displayedBase));
     if(changePreviewFactor) ds::Set(shared->rewardMultiplier,ds::MaxMultiplier);
     displayedFinal = {OnPrayer(s,m),OnSoul(s,m),OnBreach(s,m),displayedBase.gem};
-    RewardBuffers after{}; assert(Field(playerBuffer,0x218,after));
+    RewardBuffers after{}; assert(ReadRewardBuffers(playerBuffer,after));
     assert(memcmp(&after,&displayedBase,sizeof(after))==0);
 }
 __declspec(noinline) void __fastcall ClaimFixture(void* s,const void* m) {
     ++grantCalls; selfSeen=s; methodSeen=m;
-    int gem = 0; Field(playerBuffer,0x224,gem);
+    int gem = 0; Field(playerBuffer,0x228,gem);
     granted = {OnPrayer(s,m),OnSoul(s,m),OnBreach(s,m),gem};
-    if(clearClaimBuffer) WriteField(playerBuffer,0x224,0);
+    if(clearClaimBuffer) WriteField(playerBuffer,0x228,0);
 }
 void __fastcall SinUpdateStub(void*,const void*) { ++sinUpdateCalls; }
 void __fastcall ClearDisableStub(void*,const void*) { ++clearDisableCalls; }
-void ResetBuffers() { WriteField(playerBuffer,0x218,RewardBuffers{3,7,11,5}); }
+void ResetBuffers() { WriteField(playerBuffer,0x224,123456); WriteRewardBuffers(playerBuffer,RewardBuffers{3,7,11,5}); }
 void ExpectBuffers() {
-    RewardBuffers now{}; assert(Field(playerBuffer,0x218,now));
+    int other=0; assert(Field(playerBuffer,0x224,other) && other==123456);
+    RewardBuffers now{}; assert(ReadRewardBuffers(playerBuffer,now));
     assert(now.prayer==3 && now.soul==7 && now.breach==11 && now.gem==5 && !settlement);
 }
 void SinAndSettlementTests(ds::Shared& data,void* s,const void* m) {
@@ -110,14 +111,14 @@ void SinAndSettlementTests(ds::Shared& data,void* s,const void* m) {
     changePreviewFactor=true;OnSetReward(s,m);ExpectBuffers();changePreviewFactor=false;
     assert(displayedFinal.soul==25 && displayedFinal.gem==13 && data.rewardMultiplier==ds::MaxMultiplier);
     data.rewardMultiplier=2500;clearClaimBuffer=true;OnGetReward(s,m);clearClaimBuffer=false;
-    RewardBuffers after{};Field(playerBuffer,0x218,after);assert(after.gem==0 && after.soul==7 && !settlement);
+    RewardBuffers after{};ReadRewardBuffers(playerBuffer,after);assert(after.gem==0 && after.soul==7 && !settlement);
     ResetBuffers();data.enabled=0;OnGetReward(s,m);ExpectBuffers();assert(granted.soul==10 && granted.gem==5);
     data.enabled=ds::Reward;data.clientHeartbeat=LONG(GetTickCount()-4000);OnSetReward(s,m);ExpectBuffers();
     assert(displayedFinal.soul==10 && displayedFinal.gem==5);
     data.clientHeartbeat=LONG(GetTickCount());noPlayer=true;
     {SettlementScope missing(2500);assert(!settlement);} noPlayer=false;
     assert(!WriteField(reinterpret_cast<void*>(1),0x218,0));
-    WriteField(playerBuffer,0x218,RewardBuffers{0,0,-2,0});OnSetReward(s,m);
+    WriteRewardBuffers(playerBuffer,RewardBuffers{0,0,-2,0});OnSetReward(s,m);
     assert(displayedFinal.prayer==0 && displayedFinal.soul==0 && displayedBase.breach==-2 && displayedFinal.gem==0);
     ResetBuffers();data.enabled=ds::Reward;data.rewardMultiplier=2500;rewardScreen=nullptr;
 }
@@ -145,14 +146,14 @@ void RewardLimitTests(ds::Shared& data,void* s,const void* m) {
     loadCurrency={BalanceStub<Currency::Prayer>,BalanceStub<Currency::Soul>,BalanceStub<Currency::Breach>,BalanceStub<Currency::Gem>};
     originalCurrencySave={SaveFixture<Currency::Prayer>,SaveFixture<Currency::Soul>,SaveFixture<Currency::Breach>,SaveFixture<Currency::Gem>};
     originalGetReward=ClaimAndSaveStub;data.enabled=ds::Reward;data.rewardMultiplier=ds::MaxMultiplier;
-    bank.fill(0);WriteField(playerBuffer,0x218,RewardBuffers{3000,7000,11000,5000});
+    bank.fill(0);WriteRewardBuffers(playerBuffer,RewardBuffers{3000,7000,11000,5000});
     OnSetReward(s,m);
     assert(displayedBase.soul==7000000 && displayedFinal.soul==10500000 && displayedFinal.gem==5000000);
     OnSetReward(s,m);assert(displayedFinal.soul==10500000);
     OnGetReward(s,m);
     assert(granted.prayer==4500000 && granted.soul==10500000 && granted.breach==16500000 && granted.gem==5000000);
     assert(bank[0]==granted.prayer && bank[1]==granted.soul && bank[2]==granted.breach && bank[3]==granted.gem);
-    RewardBuffers after{};Field(playerBuffer,0x218,after);assert(after.soul==7000 && after.gem==5000 && !settlement);
+    RewardBuffers after{};ReadRewardBuffers(playerBuffer,after);assert(after.soul==7000 && after.gem==5000 && !settlement);
     // Preview and grant clip only to the available signed-int balance space.
     bank={INT_MAX-101,INT_MAX-202,INT_MAX-303,INT_MAX-404};
     OnSetReward(s,m);assert(displayedFinal.prayer==101 && displayedFinal.soul==202 && displayedFinal.breach==303 && displayedFinal.gem==404);
@@ -166,7 +167,7 @@ void RewardLimitTests(ds::Shared& data,void* s,const void* m) {
     // With a full balance, preview/grant are zero, not one and never negative.
     OnSetReward(s,m);assert(displayedFinal.soul==0 && displayedFinal.gem==0);
     OnGetReward(s,m);for(int amount:bank)assert(amount==INT_MAX);
-    bank.fill(1000000);WriteField(playerBuffer,0x218,RewardBuffers{2000000,2000000,2000000,2000000});
+    bank.fill(1000000);WriteRewardBuffers(playerBuffer,RewardBuffers{2000000,2000000,2000000,2000000});
     OnSetReward(s,m);assert(displayedFinal.soul==INT_MAX-1000000);
     OnGetReward(s,m);assert(granted.soul==INT_MAX-1000000 && bank[1]==INT_MAX);
     // Actual four-argument save detours preserve sync/tracking and MethodInfo.
@@ -268,11 +269,11 @@ int main(int argc,char** argv) {
     assert(!OnCharacter(&dummy,3,&method) && !OnSkin(&dummy,3,0,&method) && !OnWeapon(&dummy,3,912,&method));
     characterAsset[0x1c]=0;
     data.clientHeartbeat=LONG(GetTickCount()-4000);assert(!OnSkin(&dummy,3,0,&method) && !OnPet(&dummy,7,&method));
-    data.clientHeartbeat=LONG(GetTickCount());characterFixtureId=22;petFixtureId=35;
-    Put(characterAsset,0x18,22);Put(petAsset,0x18,35);
-    assert(OnCharacter(&dummy,22,&method) && OnSkin(&dummy,22,0,&method) && OnWeapon(&dummy,22,912,&method) && OnPet(&dummy,35,&method));
+    data.clientHeartbeat=LONG(GetTickCount());characterFixtureId=22;petFixtureId=39;
+    Put(characterAsset,0x18,22);Put(petAsset,0x18,39);
+    assert(OnCharacter(&dummy,22,&method) && OnSkin(&dummy,22,0,&method) && OnWeapon(&dummy,22,912,&method) && OnPet(&dummy,39,&method));
     characterAsset[0x1c]=1;petAsset[0x1d]=1;
-    assert(!OnCharacter(&dummy,22,&method) && !OnPet(&dummy,35,&method));
+    assert(!OnCharacter(&dummy,22,&method) && !OnPet(&dummy,39,&method));
     characterAsset[0x1c]=petAsset[0x1d]=0;characterFixtureId=3;petFixtureId=7;Put(characterAsset,0x18,3);Put(petAsset,0x18,7);
     owned=true;assert(OnWeapon(&dummy,1,999,&method));owned=false;
     int invalid=0;assert(!Field(reinterpret_cast<void*>(1),0x18,invalid));

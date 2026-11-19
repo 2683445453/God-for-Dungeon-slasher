@@ -102,7 +102,7 @@ void CurrencyMultiplierTests(ds::Shared& data,void* self,const void* method) {
     int previews=previewCalls;OnSinUpdate(self,method);assert(previewCalls==previews);
     data.diamondMultiplier=4000;OnSinUpdate(self,method);assert(previewCalls==previews+1&&displayedFinal.gem==20);ExpectBuffers();
     data.diamondMultiplier=3000;
-    {SettlementScope scope(10000);RewardBuffers shown{};Field(playerBuffer,0x218,shown);assert(shown.gem==15&&scope.gemFactor==3000);
+    {SettlementScope scope(10000);RewardBuffers shown{};ReadRewardBuffers(playerBuffer,shown);assert(shown.gem==15&&scope.gemFactor==3000);
         data.diamondMultiplier=5000;data.enabled=0;
         InvokeRunGemFixture(shown.gem,true,method);assert(savedAmount==15&&bank[3]==15);
         gem(&bank,7,false,method);assert(savedAmount==21&&bank[3]==36);

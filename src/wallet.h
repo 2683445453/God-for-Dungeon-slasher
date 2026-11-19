@@ -56,6 +56,7 @@ inline constexpr WalletEntry Wallets[]={
     {L"AnswerSheet2504","答卷（2025-04，游戏额外类型）","LoadPeriodEventGoods","SavePeriodEventGoods",WalletMode::Period,1,2},
     {L"AnswerSheet2506","答卷（2025-06，游戏额外类型）","LoadPeriodEventGoods","SavePeriodEventGoods",WalletMode::Period,2,2},
     {L"CleaningTokens","清扫代币（2026-09，游戏额外类型）","LoadEventGoods","SaveEventGoods",WalletMode::Hunting,10},
+    {L"CharacterResetCoupon","成长重置券","LoadCharacterResetCoupon","SaveCharacterResetCoupon",WalletMode::AbsoluteBool},
 };
 inline constexpr int WalletCount=int(sizeof(Wallets)/sizeof(Wallets[0]));
 inline bool ValidWallet(int index){return index>=0 && index<WalletCount;}

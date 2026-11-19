@@ -4,7 +4,7 @@ param(
     [string]$GameDirectory,
     [switch]$SkipGameCheck,
     [ValidatePattern('^[a-z0-9][a-z0-9-]{0,63}$')]
-    [string]$PackageName = 'dungeon-slasher-r25'
+    [string]$PackageName = 'dungeon-slasher-r26'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $SkipGameCheck) {

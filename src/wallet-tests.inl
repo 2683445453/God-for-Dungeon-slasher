@@ -19,7 +19,7 @@ const void* __cdecl Method(void*,const char* name,int count) {
     if(strstr(name,"SoulStoneCouponCount"))expected=name[0]=='L'?1:2;
     if(strstr(name,"PeriodEventGoods"))expected=name[0]=='L'?2:4;
     else if(strstr(name,"EventGoods"))expected=name[0]=='L'?1:3;
-    const char* two[]={"SaveGem","SaveSoulStone","SavePrayerStone","SaveBreachStone","SaveMileagePoint","SaveRuneDust","SaveRuneKey","SaveRuneRerollScroll","SaveRuneRefineTool","SaveUniqueRuneGachaCoupon","SaveUniqueRuneSelectorCoupon"};
+    const char* two[]={"SaveGem","SaveSoulStone","SavePrayerStone","SaveBreachStone","SaveMileagePoint","SaveRuneDust","SaveRuneKey","SaveRuneRerollScroll","SaveRuneRefineTool","SaveUniqueRuneGachaCoupon","SaveUniqueRuneSelectorCoupon","SaveCharacterResetCoupon"};
     for(auto* entry:two)if(!strcmp(name,entry))expected=2;
     assert(count==expected);return name;
 }
@@ -40,7 +40,7 @@ void* __cdecl Invoke(const void* method,void* object,void** args,void** exceptio
     if(failSave || (failAfterSaves>=0 && saves>=failAfterSaves)){*exception=&controller;return nullptr;}
     ++saves;int value=*static_cast<int*>(args[0]);
     bool absolute=false;
-    const char* absoluteSaves[]={"SaveRuneDust","SaveRuneKey","SaveRuneRefineTool","SaveRuneRerollScroll","SaveUniqueRuneGachaCoupon","SaveUniqueRuneSelectorCoupon"};
+    const char* absoluteSaves[]={"SaveRuneDust","SaveRuneKey","SaveRuneRefineTool","SaveRuneRerollScroll","SaveUniqueRuneGachaCoupon","SaveUniqueRuneSelectorCoupon","SaveCharacterResetCoupon"};
     for(auto* entry:absoluteSaves)if(!strcmp(name,entry)){absolute=true;assert(!*static_cast<bool*>(args[1]));}
     if(!strcmp(name,"SaveSoulStoneCouponCount")){absolute=true;value=*static_cast<int*>(args[1]);const int type=*static_cast<int*>(args[0]);assert(type==150 || type==151 || type==200 || type==300);}
     if(!strcmp(name,"SaveEventGoods")){value=*static_cast<int*>(args[1]);assert(!*static_cast<bool*>(args[2]));assert(*static_cast<int*>(args[0])>=2 && *static_cast<int*>(args[0])<=10);}
@@ -120,6 +120,6 @@ void Tests(ds::Shared& state) {
     state.panelVisible=1;state.walletSelection=35;lastWalletSelection=-1;RunUpdate();assert(state.walletReadIndex==35 && state.walletReadStatus==1 && state.walletBalance==29);state.panelVisible=0;
     assert(MH_DisableHook(reinterpret_cast<void*>(&Update))==MH_OK && MH_RemoveHook(reinterpret_cast<void*>(&Update))==MH_OK);
     artifactApi=oldApi;originalDataUpdate=oldUpdate;getPlayerData=oldPlayer;decodeMovementInt=oldDecode;originalCurrencySave[3]=oldGem;
-    std::cout<<"PASS: all 41 currency rows through real x64 main-thread detour, signed negative-balance reads and INT_MIN..INT_MAX repair, checked native additions with/without zero clamp, absolute/delta routes, partial-save/flush retry without double credit, enum/date/index isolation, request capture, multiplier bypass, read/write/mismatch diagnostics, gold unavailable, cancellation/heartbeat\n";
+    std::cout<<"PASS: all 42 currency rows through real x64 main-thread detour, signed negative-balance reads and INT_MIN..INT_MAX repair, checked native additions with/without zero clamp, absolute/delta routes, partial-save/flush retry without double credit, enum/date/index isolation, request capture, multiplier bypass, read/write/mismatch diagnostics, gold unavailable, cancellation/heartbeat\n";
 }
 }

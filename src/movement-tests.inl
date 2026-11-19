@@ -16,24 +16,24 @@ int MovementDecode(ObscuredIntBytes* value,const void* method) {
     int key=0, encrypted=0; memcpy(&key,value->bytes,4); memcpy(&encrypted,value->bytes+4,4); return encrypted^key;
 }
 int MovementMaximum(void* self,const void* method) { assert(self==movementBody && !method); return movementMaximum; }
-void SetJumpBudget(int value) { ObscuredIntBytes raw{}; assert(MovementEncode(&raw,value,nullptr)==&raw); Put(movementBody,0x4c4,raw); }
-int JumpBudget() { ObscuredIntBytes raw{}; assert(Field(movementBody,0x4c4,raw)); return MovementDecode(&raw,nullptr); }
-int DashBudget() { int count=0; assert(Field(movementBody,0x630,count)); return count; }
+void SetJumpBudget(int value) { ObscuredIntBytes raw{}; assert(MovementEncode(&raw,value,nullptr)==&raw); Put(movementBody,0x4cc,raw); }
+int JumpBudget() { ObscuredIntBytes raw{}; assert(Field(movementBody,0x4cc,raw)); return MovementDecode(&raw,nullptr); }
+int DashBudget() { int count=0; assert(Field(movementBody,0x638,count)); return count; }
 __declspec(noinline) void MovementLateFixture(void* self,const void* method) {
     ++movementLateCalls; movementSelf=self; movementMethod=method;
     // Original frame work must still execute, without being undone by refill.
-    int work=0; assert(Field(self,0x930,work)); assert(WriteField(self,0x930,work+1));
+    int work=0; assert(Field(self,0x938,work)); assert(WriteField(self,0x938,work+1));
 }
 __declspec(noinline) void MovementDashFixture(void* self,bool useCount,const void* method) {
     ++movementDashCalls; movementSelf=self; movementMethod=method; movementUseCount=useCount;
-    if(useCount) { int count=0; assert(Field(self,0x630,count)); assert(WriteField(self,0x630,count-1)); }
+    if(useCount) { int count=0; assert(Field(self,0x638,count)); assert(WriteField(self,0x638,count-1)); }
 }
 __declspec(noinline) bool MovementReadyFixture(void* self,const void* method) {
     ++movementCheckCalls; movementSelf=self; movementMethod=method; return movementNativeReady;
 }
 void ResetMovement(int dash,int jump) {
-    memset(movementBody,0x6d,sizeof(movementBody)); SetJumpBudget(jump); Put(movementBody,0x630,dash); Put(movementBody,0x930,0);
-    Put(movementBody,0x634,3.75f); Put(movementBody,0x8e8,7.5f);
+    memset(movementBody,0x6d,sizeof(movementBody)); SetJumpBudget(jump); Put(movementBody,0x638,dash); Put(movementBody,0x938,0);
+    Put(movementBody,0x63c,3.75f); Put(movementBody,0x8e8,7.5f);
     Put(movementBody,0x448,false); // Refill must not force the canDash state.
 }
 void MovementTests(ds::Shared& data,const void* method) {
@@ -47,7 +47,7 @@ void MovementTests(ds::Shared& data,const void* method) {
     // Every byte except the two budgets must remain untouched, including
     // encrypted state flags, gravity, velocity, animation timers and cooldown.
     for(size_t i=0;i<sizeof(movementBody);++i)
-        if(!(i>=0x4c4 && i<0x4d8) && !(i>=0x630 && i<0x634))assert(movementBody[i]==before[i]);
+        if(!(i>=0x4cc && i<0x4e0) && !(i>=0x638 && i<0x63c))assert(movementBody[i]==before[i]);
     const auto dashRefills=data.dashRefills, jumpRefills=data.jumpRefills;
     const int encodes=movementEncodes;
     RefillMovement(movementBody); assert(data.dashRefills==dashRefills && data.jumpRefills==jumpRefills && movementEncodes==encodes);
@@ -90,7 +90,7 @@ void MovementTests(ds::Shared& data,const void* method) {
         SetJumpBudget(JumpBudget()-1);
     }
     assert(movementLateCalls==lateBefore+24 && movementDashCalls==dashBefore+24);
-    int work=0; assert(Field(movementBody,0x930,work) && work==24);
+    int work=0; assert(Field(movementBody,0x938,work) && work==24);
     ds::Disable(&data); frame(movementBody,method); assert(DashBudget()==3 && JumpBudget()==0);
     assert(!ready(movementBody,method) && movementSelf==movementBody && movementMethod==method);
     dash(movementBody,true,method); assert(movementUseCount && DashBudget()==2);

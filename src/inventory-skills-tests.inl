@@ -5,7 +5,7 @@ std::vector<void*> CapacitySkills(void* owner) {void* list=nullptr;std::vector<v
 void __fastcall CapacitySkillCtor(void* self,int index,const void*){Put(self,0x10,index);Put(self,0x3c,index);Put(self,0x14,-1);Put(self,0x30,0);}
 __declspec(noinline) void __fastcall CapacityInitFixture(void* self,const void* method) {
     ++capacityInitCalls;capacityMethod=method;
-    void* list=ArtiList();for(int i=0;i<skillCurrentSlots+skillCurrentBuffSlots+skillCurrentBackpack+6;++i){void* item=ArtiObject(ArtiItemClass);CapacitySkillCtor(item,i,nullptr);ArtiAdd(list,item);}Put(self,0x40,list);Put(self,0x6c,true);
+    void* list=ArtiList();for(int i=0;i<skillCurrentSlots+skillCurrentBuffSlots+skillCurrentBackpack+6;++i){void* item=ArtiObject(ArtiItemClass);CapacitySkillCtor(item,i,nullptr);ArtiAdd(list,item);}Put(self,0x40,list);Put(self,0x78,true);
 }
 __declspec(noinline) void __fastcall CapacityUpdateFixture(void* self,const void* method){assert(self==capacitySkillOwner);++capacityFrames;capacityMethod=method;}
 void __fastcall CapacityRefresh(void* self,const void*){assert(self==capacitySkillOwner);++capacityRefreshes;}
@@ -27,14 +27,14 @@ __declspec(noinline) void __fastcall CapacitySkillUiFixture(void* self,const voi
 }
 __declspec(noinline) void __fastcall CapacitySkillLoadFixture(void* self,void* container,const void* method) {
     ++capacityLoadCalls;GameAction volatile init=CapacityInitFixture;init(self,method);
-    void* list=nullptr;std::vector<void*> records;assert(Field(container,0x1cb0,list)&&ManagedItems(list,records));auto skills=CapacitySkills(self);
+    void* list=nullptr;std::vector<void*> records;assert(Field(container,0x1cc0,list)&&ManagedItems(list,records));auto skills=CapacitySkills(self);
     for(void* record:records){int at=ArtiInt(record,0x14);assert(at>=0&&at<int(skills.size()));Put(skills[at],0x14,ArtiInt(record,0x10));}
 }
 #include "acquisition-tests.inl"
 #include "expanded-capacity-tests.inl"
 void InventorySkillTests(ds::Shared& data,const void* method) {
     uintptr_t oldBase=gameBase;auto oldApi=artifactApi;const auto oldMetadata=initializeMetadata;const auto oldController=getDataController;void* oldUsage=dataControllerMethodUsage;
-    auto* code=static_cast<unsigned char*>(VirtualAlloc(nullptr,0x1000000,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));assert(code);gameBase=reinterpret_cast<uintptr_t>(code);
+    auto* code=static_cast<unsigned char*>(VirtualAlloc(nullptr,0x1200000,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));assert(code);gameBase=reinterpret_cast<uintptr_t>(code);
     for(const auto& patch:ds::SkillCapacityPatches)memcpy(code+patch.rva,patch.prefix,16);
     for(const auto& patch:ds::ArtifactCapacityPatches)memcpy(code+patch.rva,patch.prefix,16);
     skillCurrentSlots=skillCurrentBackpack=artifactCurrentBackpack=6;skillCurrentBuffSlots=2;skillOwner=nullptr;skillLoading=skillLoadFailed=skillUiFailed=false;
@@ -55,7 +55,7 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     assert(!ApplyArtifactCapacity(owner));assert(CapacitySixValue(owner,0,method)==6);
     data.enabled=ds::ArtifactInventoryCapacity;assert(ApplyArtifactCapacity(owner));auto back=ArtiItems(owner);
     assert(ArtiInt(owner,0xac)==7&&ArtiInt(owner,0xb0)==6&&artifactTracking.backpack==12&&back.size()==26&&back[7]==old[7]&&back[19]==old[19]);
-    assert(CapacitySixValue(owner,0x10463af,method)==12&&CapacitySixValue(nullptr,0,method)==6);
+    assert(CapacitySixValue(owner,0x1093a6f,method)==12&&CapacitySixValue(nullptr,0,method)==6);
     for(int i=0;i<int(back.size());++i)assert(ArtiInt(back[i],0x18)==i);
     assert(!ArtifactFull(owner,false));for(int i=0;i<12;++i)Put(back[7+i],0x14,700+i);assert(ArtifactFull(owner,false));
     data.inventorySlots=30;assert(ApplyArtifactCapacity(owner));back=ArtiItems(owner);assert(back.size()==44&&artifactTracking.backpack==30);
@@ -89,8 +89,8 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     data.enabled=ds::SkillCapacity;frame(capacitySkillOwner,method);auto expanded=CapacitySkills(capacitySkillOwner);
     assert(skillCurrentSlots==12&&expanded.size()==26&&capacityRefreshes==1&&expanded[12]==buff&&expanded[14]==backpackItem&&expanded[0]==skills[0]&&ArtiInt(expanded[0],0x30)==8);
     for(int i=0;i<26;++i)assert(ArtiInt(expanded[i],0x10)==i);for(int i=6;i<12;++i)assert(ArtiInt(expanded[i],0x14)==-1);
-    assert(CapacitySixValue(capacitySkillOwner,0x1076998,method)==12&&CapacitySixValue(capacitySkillOwner,0x1076de1,method)==6);
-    assert(CapacityEightValue(capacitySkillOwner,0xfbba90,method)==14&&CapacityEightValue(owner,0xfbba90,method)==8&&CapacityEightValue(capacitySkillOwner,0x111111,method)==8);
+    assert(CapacitySixValue(capacitySkillOwner,0x10c8598,method)==12&&CapacitySixValue(capacitySkillOwner,0x10c89e1,method)==6);
+    assert(CapacityEightValue(capacitySkillOwner,0x1004d20,method)==14&&CapacityEightValue(owner,0x1004d20,method)==8&&CapacityEightValue(capacitySkillOwner,0x111111,method)==8);
     Put(expanded[11],0x14,111);data.skillSlots=6;frame(capacitySkillOwner,method);assert(data.skillStatus==2&&skillCurrentSlots==12&&CapacitySkills(capacitySkillOwner)[12]==buff);
     Put(expanded[11],0x14,-1);frame(capacitySkillOwner,method);assert(skillCurrentSlots==6&&CapacitySkills(capacitySkillOwner)[6]==buff&&CapacitySkills(capacitySkillOwner)[8]==backpackItem);
     data.skillSlots=30;artifactViewerOpen=true;frame(capacitySkillOwner,method);assert(data.skillStatus==3&&skillCurrentSlots==6);artifactViewerOpen=false;
@@ -105,8 +105,8 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     // buff slots and inventory indices distinct during save and resume.
     for(int physical:{7,12,30})for(int backpack:{6,12,30})for(int n:{6,12,30})for(int native:{6,7}){
         int p=0,b=0,s=0,a=0;int encoded=ds::artifacts::SaveLayout(physical,native,backpack,n);assert(ds::artifacts::LoadLayout(encoded,p,a,b,s)&&p==physical&&a==native&&b==backpack&&s==n);}
-    void* container=ArtiObject(0xa3);void* records=ArtiList();for(auto value:{std::pair<int,int>{120,29},{600,30},{800,32}}){void* item=ArtiObject(ArtiItemClass);Put(item,0x10,value.first);Put(item,0x14,value.second);ArtiAdd(records,item);}Put(container,0x1cb0,records);Put(container,0x1cd0,ArtiList());
-    const int encoded=ds::artifacts::SaveLayout(7,6,30,30);Put(container,0x1cd8,encoded);data.enabled=0;load(capacitySkillOwner,container,method);
+    void* container=ArtiObject(0xa3);void* records=ArtiList();for(auto value:{std::pair<int,int>{120,29},{600,30},{800,32}}){void* item=ArtiObject(ArtiItemClass);Put(item,0x10,value.first);Put(item,0x14,value.second);ArtiAdd(records,item);}Put(container,0x1cc0,records);Put(container,0x1ce0,ArtiList());
+    const int encoded=ds::artifacts::SaveLayout(7,6,30,30);Put(container,0x1ce8,encoded);data.enabled=0;load(capacitySkillOwner,container,method);
     assert(!skillLoadFailed&&skillCurrentSlots==30&&data.skillStatus==2&&ArtiInt(CapacitySkills(capacitySkillOwner)[29],0x14)==120&&ArtiInt(CapacitySkills(capacitySkillOwner)[30],0x14)==600&&ArtiInt(CapacitySkills(capacitySkillOwner)[32],0x14)==800);
     Put(CapacitySkills(capacitySkillOwner)[29],0x14,-1);frame(capacitySkillOwner,method);assert(skillCurrentSlots==6&&ArtiInt(CapacitySkills(capacitySkillOwner)[6],0x14)==600&&ArtiInt(CapacitySkills(capacitySkillOwner)[8],0x14)==800);
     std::vector<void*> savedRecords;assert(ManagedItems(records,savedRecords));Put(savedRecords[0],0x14,99);int calls=capacityLoadCalls;load(capacitySkillOwner,container,method);assert(skillLoadFailed&&data.skillStatus==-2&&capacityLoadCalls==calls);
@@ -115,17 +115,17 @@ void InventorySkillTests(ds::Shared& data,const void* method) {
     // The artifact half restores the independent backpack capacity too.
     originalArtifactLoad=ArtiLoadFixture;artiOwner=ArtiSetup();OnArtifactLoad(artiOwner,container,method);assert(!artifactLoadFailed&&artifactTracking.backpack==6);
     data.enabled=ds::ArtifactInventoryCapacity;data.inventorySlots=30;assert(ApplyArtifactCapacity(artiOwner));auto artifactItems=ArtiItems(artiOwner);Put(artifactItems[36],0x14,900);
-    Put(container,0x1cd8,ArtiInt(artiOwner,0xb0));StampArtifactSave(artiOwner,container);int p=0,a=0,b=0,s=0;assert(ds::artifacts::LoadLayout(ArtiInt(container,0x1cd8),p,a,b,s)&&b==30&&s==30);
-    RestoreArtifactSavePreview(container);assert(ArtiInt(container,0x1cd8)==p);assert(SavedLayout(container,p,a,b,s)&&b==30&&s==30);
+    Put(container,0x1ce8,ArtiInt(artiOwner,0xb0));StampArtifactSave(artiOwner,container);int p=0,a=0,b=0,s=0;assert(ds::artifacts::LoadLayout(ArtiInt(container,0x1ce8),p,a,b,s)&&b==30&&s==30);
+    RestoreArtifactSavePreview(container);assert(ArtiInt(container,0x1ce8)==p);assert(SavedLayout(container,p,a,b,s)&&b==30&&s==30);
     void* backSave=ArtiObject(0xa3);void* backRecords=ArtiList();void* backRecord=ArtiObject(ArtiItemClass);
     Put(backRecord,0x14,900);Put(backRecord,0x18,36);Put(backRecord,0x1c,3);ArtiAdd(backRecords,backRecord);
-    Put(backSave,0x1cd0,backRecords);Put(backSave,0x1cd8,ds::artifacts::SaveLayout(7,6,30,30));
+    Put(backSave,0x1ce0,backRecords);Put(backSave,0x1ce8,ds::artifacts::SaveLayout(7,6,30,30));
     artiOwner=ArtiSetup();data.enabled=0;OnArtifactLoad(artiOwner,backSave,method);
     assert(!artifactLoadFailed&&artifactTracking.backpack==30&&data.inventoryStatus==2&&ArtiInt(ArtiItems(artiOwner)[36],0x14)==900&&ArtiInt(ArtiItems(artiOwner)[36],0x1c)==3);
     Put(ArtiItems(artiOwner)[36],0x14,-1);assert(ApplyArtifactCapacity(artiOwner)&&artifactTracking.backpack==6);
     // Native and r9 markers remain readable; invalid new tags are rejected.
-    Put(container,0x1cb0,ArtiList());artifactSaveHint.Reset();Put(container,0x1cd8,ds::artifacts::SaveCapacity(12,7));load(capacitySkillOwner,container,method);assert(skillCurrentSlots==6&&!skillLoadFailed);
-    Put(container,0x1cd8,0x44540000);load(capacitySkillOwner,container,method);assert(skillLoadFailed&&data.skillStatus==-2);
+    Put(container,0x1cc0,ArtiList());artifactSaveHint.Reset();Put(container,0x1ce8,ds::artifacts::SaveCapacity(12,7));load(capacitySkillOwner,container,method);assert(skillCurrentSlots==6&&!skillLoadFailed);
+    Put(container,0x1ce8,0x44540000);load(capacitySkillOwner,container,method);assert(skillLoadFailed&&data.skillStatus==-2);
     data.enabled=0;init(capacitySkillOwner,method);assert(!skillLoadFailed&&skillCurrentSlots==6);
     R11AcquisitionTests(data,method);
     ExpandedCapacityTests(data,method);

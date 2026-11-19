@@ -395,10 +395,10 @@ void* ArtifactSaveContainer() {
 }
 void StampArtifactSave(void* owner,void* container) {
     int physical=0,allowed=0,saved=0;
-    if(artifactTracking.owner!=owner || !Field(owner,0xac,physical)||!Field(owner,0xb0,allowed)||!Field(container,0x1cd8,saved)||saved!=allowed)return;
+    if(artifactTracking.owner!=owner || !Field(owner,0xac,physical)||!Field(owner,0xb0,allowed)||!Field(container,0x1ce8,saved)||saved!=allowed)return;
     if(physical!=7 || allowed!=artifactTracking.nativeAllowed || artifactTracking.backpack!=6 || skillCurrentSlots!=6 || skillCurrentBackpack!=6 || skillCurrentBuffSlots!=2) {
         int marker=artifactTracking.backpack==6&&skillCurrentSlots==6&&skillCurrentBackpack==6&&skillCurrentBuffSlots==2?ds::artifacts::SaveCapacity(physical,artifactTracking.nativeAllowed):ds::artifacts::SaveLayout(physical,artifactTracking.nativeAllowed,artifactTracking.backpack,skillCurrentSlots,skillCurrentBackpack,skillCurrentBuffSlots);
-        if(WriteField(container,0x1cd8,marker)){artifactSaveHint=ManagedRoot(artifactApi,container);artifactSaveHintValue=marker;}
+        if(WriteField(container,0x1ce8,marker)){artifactSaveHint=ManagedRoot(artifactApi,container);artifactSaveHintValue=marker;}
     }
     else if(artifactSaveHint.Get()==container){artifactSaveHint.Reset();artifactSaveHintValue=0;}
 }
@@ -410,7 +410,7 @@ void* __fastcall OnArtifactSaveStates(void* self,const void* method) {
 }
 void RestoreArtifactSavePreview(void* container) {
     int encoded=0,physical=0,native=0;
-    if(Field(container,0x1cd8,encoded)&&ds::artifacts::LoadCapacity(encoded,physical,native))WriteField(container,0x1cd8,physical);
+    if(Field(container,0x1ce8,encoded)&&ds::artifacts::LoadCapacity(encoded,physical,native))WriteField(container,0x1ce8,physical);
 }
 void __fastcall OnAutoSave(void* self,void* sceneName,const void* method) {
     if(artifactLoadFailed || skillLoadFailed){ArtifactStatus(-2);return;}
@@ -451,20 +451,20 @@ bool PreviewImages(void* self,int count) {
 }
 void __fastcall OnLoadPreview(void* self,const void* method) {
     void* container=ArtifactSaveContainer();int saved=0,physical=0,native=0;
-    bool tagged=Field(container,0x1cd8,saved)&&ds::artifacts::LoadCapacity(saved,physical,native);
+    bool tagged=Field(container,0x1ce8,saved)&&ds::artifacts::LoadCapacity(saved,physical,native);
     if(!tagged)physical=std::max(7,std::clamp(saved,6,ds::MaxArtifactSlots));
     if(self && !PreviewImages(self,physical))ArtifactUiResult(false);
     // Native preview tests equality with seven to show the seventh wrapper;
     // its indexed sprite loop can populate every added image once resized.
     int preview=(tagged || saved>7)?7:saved;
-    if(preview!=saved)WriteField(container,0x1cd8,preview);
+    if(preview!=saved)WriteField(container,0x1ce8,preview);
     originalLoadPreview(self,method);
-    if(preview!=saved)WriteField(container,0x1cd8,saved);
+    if(preview!=saved)WriteField(container,0x1ce8,saved);
 }
 void __fastcall OnArtifactLoad(void* self,void* container,const void* method) {
     int saved=0,physical=7,native=6,backpack=6,skills=6;
     auto failed=[] {artifactLoadFailed=true;ArtifactStatus(-2);};
-    if(!Field(container,0x1cd8,saved)){failed();return;}
+    if(!Field(container,0x1ce8,saved)){failed();return;}
     bool tagged=ds::artifacts::LoadLayout(saved,physical,native,backpack,skills);
     if(ds::artifacts::Tagged(saved) && !tagged){failed();return;}
     if(!tagged && artifactSaveHint.Get()==container) {
@@ -477,14 +477,14 @@ void __fastcall OnArtifactLoad(void* self,void* container,const void* method) {
     artifactBusy=true;bool ready=ResizeArtifacts(self,physical,backpack);artifactBusy=false;
     if(!ready){failed();return;}
     void* records=nullptr;std::vector<void*> savedItems,currentItems;
-    if(!Field(container,0x1cd0,records)||!ManagedItems(records,savedItems)){failed();return;}
+    if(!Field(container,0x1ce0,records)||!ManagedItems(records,savedItems)){failed();return;}
     void* list=nullptr;if(!Field(self,0xa0,list)||!ManagedItems(list,currentItems)){failed();return;}
     for(void* item:savedItems){int index=-1;if(!Field(item,0x18,index)||index<0||index>=int(currentItems.size())){failed();return;}}
     artifactLoadFailed=false;
     artifactLoading=true;
-    if(tagged)WriteField(container,0x1cd8,native);
+    if(tagged)WriteField(container,0x1ce8,native);
     originalArtifactLoad(self,container,method);
-    if(tagged)WriteField(container,0x1cd8,saved);
+    if(tagged)WriteField(container,0x1ce8,saved);
     artifactLoading=false;
     // A tagged seven-slot save can contain an occupied custom seventh slot
     // without the native seventh-slot bonus. Keep it usable until removed.

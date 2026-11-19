@@ -55,8 +55,8 @@ def main():
             records.append((row["name"], rva))
             if name == "wallet-profile.inl" and row["name"] and "/" in row["name"]:
                 wallet_records.append((row["name"], rva))
-    assert len(records) == 300, f"Expected full r22 profile, got {len(records)} records"
-    assert len(wallet_records) == 53
+    assert len(records) == 302, f"Expected full r26 profile, got {len(records)} records"
+    assert len(wallet_records) == 55
     capacity_profile = (ROOT / "src/capacity-profile.inl").read_text(encoding="utf-8")
     operands = list(re.finditer(r'\{0x([0-9a-f]+),(\d+),(\d+),(-?\d+),-?\d+,\{', capacity_profile))
     assert len(operands) == 68
@@ -114,17 +114,18 @@ def main():
         for space, name in (("SkillTable", "SkillData"), ("ArtifactTable", "ArtifactData"), ("NSP", "RuneInstance"), ("NSP", "RuneDropService")):
             assert re.search(r'// Namespace: '+space+r'\s*\n(?:\[[^\n]*\]\n)*public (?:class|static class) '+name+r'\b', dump), (space, name)
         def field(type_name, name, offset):
-            block = re.search(r'(?m)^public (?:abstract )?class '+re.escape(type_name)+r'\b[^\n]*\n\{(.*?)^\}',dump,re.S|re.M)[1]
+            block = re.search(r'(?m)^public (?:abstract )?class '+re.escape(type_name)+r'(?=[: <])[^\n]*\n\{(.*?)^\}',dump,re.S|re.M)[1]
             assert re.search(r'\b'+re.escape(name)+r'; // 0x'+f'{offset:X}'+r'\b',block), (type_name,name,offset)
-        for name, offset in (("NowDashCount",0x630),("moreJumpCount",0x4c4),("weaponSkillCoolTime",0x620),("nowWeaponSkillCount",0x628)):
+        for name, offset in (("NowDashCount",0x638),("moreJumpCount",0x4cc),("weaponSkillCoolTime",0x628),("nowWeaponSkillCount",0x630)):
             field("PlayerMovement",name,offset)
-        for name, offset in (("SkillAutoSaveData",0x1cb0),("skillHasteDict",0x1cb8),("ArtifactAutoSaveData",0x1cd0),("ArtifactNum",0x1cd8),("ArtifactStates",0x1ce0)):
+        for name, offset in (("SkillAutoSaveData",0x1cc0),("skillHasteDict",0x1cc8),("ArtifactAutoSaveData",0x1ce0),("ArtifactNum",0x1ce8),("ArtifactStates",0x1cf0)):
             field("AutoSaveDataContainer",name,offset)
         field("Skills","SkillCooldown",0x70)
+        field("PlayerData","getGem",0x228)
         field("Delegate","method_ptr",0x10)
         field("Delegate","m_target",0x20)
         assert "public const CharacterName Slime = 22;" in dump
-    print(f"PASS: exact build hashes, {len(records)} native prefixes, 68 capacity operands and scoped/native callees, {len(required)} IL2CPP exports, actual challenge RNG call/compare" + (", 53 wallet overload signatures, catalog namespaces and save fields" if args.dump else ""))
+    print(f"PASS: exact build hashes, {len(records)} native prefixes, 68 capacity operands and scoped/native callees, {len(required)} IL2CPP exports, actual challenge RNG call/compare" + (", 55 wallet overload signatures, catalog namespaces and save fields" if args.dump else ""))
 
 
 if __name__ == "__main__":

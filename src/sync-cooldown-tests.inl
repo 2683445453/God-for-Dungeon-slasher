@@ -27,7 +27,7 @@ ObscuredFloatBytes* Encode(ObscuredFloatBytes* out,float value,const void* metho
     assert(!method);memset(out->bytes,0xa3,24);memcpy(out->bytes,&value,4);return out;
 }
 void Refill(void* self,const void* method) {
-    assert(!method);++refills;Put(self,0x628,4);Put(self,0x620,OnWeaponCooldown(self,nullptr));
+    assert(!method);++refills;Put(self,0x630,4);Put(self,0x628,OnWeaponCooldown(self,nullptr));
 }
 void Tests(ds::Shared& state) {
     const auto api=artifactApi;
@@ -97,9 +97,9 @@ void Tests(ds::Shared& state) {
         else for(auto b:value.bytes)assert(b==0x5a);
         float duration=0;assert(Field(skills[i],0x58,duration) && duration==7.5f);
     }
-    refillWeaponCooldown=Refill;Put(owner,0x620,5.0f);Put(owner,0x628,0);RefillMovement(owner);
-    assert(refills==1 && ArtiInt(owner,0x628)==4);float timer=1;assert(Field(owner,0x620,timer)&&timer==0);
-    state.enabled=0;Put(owner,0x620,5.0f);RefillMovement(owner);assert(refills==1);
+    refillWeaponCooldown=Refill;Put(owner,0x628,5.0f);Put(owner,0x630,0);RefillMovement(owner);
+    assert(refills==1 && ArtiInt(owner,0x630)==4);float timer=1;assert(Field(owner,0x628,timer)&&timer==0);
+    state.enabled=0;Put(owner,0x628,5.0f);RefillMovement(owner);assert(refills==1);
     state.enabled=ds::NoCooldown;state.clientHeartbeat=LONG(GetTickCount()-4000);
     assert(weaponQuery(owner,&method)==12.5f);RefillMovement(owner);assert(refills==1);
     for(void* target:{reinterpret_cast<void*>(&ConnectFixture),reinterpret_cast<void*>(&TimeoutFixture),reinterpret_cast<void*>(&SkillFixture),reinterpret_cast<void*>(&WeaponFixture)}) {

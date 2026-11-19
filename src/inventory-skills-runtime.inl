@@ -90,7 +90,7 @@ void SkillStatus(int value){if(shared)ds::Set(shared->skillStatus,value);}
 bool ApplySkillCapacity(void* owner) {
     if(skillLoading)return false;
     if(skillLoadFailed){SkillStatus(-2);return false;}
-    bool valid=false;if(!Field(owner,0x6c,valid)||!valid)return false;
+    bool valid=false;if(!Field(owner,0x78,valid)||!valid)return false;
     void* list=nullptr;std::vector<void*> items;std::vector<bool> occupied;
     if(!SkillSnapshot(owner,list,items,occupied)){SkillStatus(-1);return false;}
     skillOwner=owner;
@@ -146,7 +146,7 @@ void __fastcall OnSkillDestroy(void* self,const void* method) {
     if(skillOwner==self){SetSkillNativeLimit(6);skillOwner=nullptr;skillLoadFailed=false;SkillStatus(0);}
 }
 bool SavedLayout(void* container,int& physical,int& native,int& backpack,int& skills,int& skillBackpack,int& buffs) {
-    int saved=0;if(!Field(container,0x1cd8,saved))return false;
+    int saved=0;if(!Field(container,0x1ce8,saved))return false;
     if(ds::artifacts::LoadLayout(saved,physical,native,backpack,skills,skillBackpack,buffs))return true;
     if(artifactSaveHint.Get()==container && ds::artifacts::LoadLayout(artifactSaveHintValue,physical,native,backpack,skills,skillBackpack,buffs)&&physical==saved)return true;
     return false;
@@ -156,9 +156,9 @@ bool SavedLayout(void* container,int& physical,int& native,int& backpack,int& sk
 void __fastcall OnSkillLoad(void* self,void* container,const void* method) {
     int physical=7,native=6,backpack=6,skills=6,skillBackpack=6,buffs=2,saved=0;
     bool tagged=SavedLayout(container,physical,native,backpack,skills,skillBackpack,buffs);
-    if(!Field(container,0x1cd8,saved)||(!tagged&&ds::artifacts::Tagged(saved))){skillLoadFailed=true;SkillStatus(-2);return;}
+    if(!Field(container,0x1ce8,saved)||(!tagged&&ds::artifacts::Tagged(saved))){skillLoadFailed=true;SkillStatus(-2);return;}
     void* records=nullptr;std::vector<void*> items;
-    if(!Field(container,0x1cb0,records)||!ManagedItems(records,items)){skillLoadFailed=true;SkillStatus(-2);return;}
+    if(!Field(container,0x1cc0,records)||!ManagedItems(records,items)){skillLoadFailed=true;SkillStatus(-2);return;}
     for(void* item:items){int index=-1;if(!Field(item,0x14,index)||index<0||index>=skills+buffs+skillBackpack+6){skillLoadFailed=true;SkillStatus(-2);return;}}
     skillLoadSlots=skills;skillLoadBackpack=skillBackpack;skillLoadBuffSlots=buffs;skillLoading=true;skillLoadFailed=false;
     originalSkillLoad(self,container,method);skillLoading=false;

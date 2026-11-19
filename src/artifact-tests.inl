@@ -132,21 +132,21 @@ __declspec(noinline) void ArtiEquipFixture(void* self,const void* method) {
 }
 __declspec(noinline) void ArtiLoadFixture(void* self,void* container,const void* method) {
     assert(self==artiOwner);++artiLoads;artiMethodSeen=artiLoadMethod=method;
-    int native=ArtiInt(container,0x1cd8);assert(native==6||native==7);Put(self,0xb0,native);
+    int native=ArtiInt(container,0x1ce8);assert(native==6||native==7);Put(self,0xb0,native);
     auto items=ArtiItems(self);for(void* item:items)Put(item,0x14,-1);
-    void* saved=nullptr;assert(Field(container,0x1cd0,saved));std::vector<void*> records;assert(ManagedItems(saved,records));
+    void* saved=nullptr;assert(Field(container,0x1ce0,saved));std::vector<void*> records;assert(ManagedItems(saved,records));
     for(void* record:records){int index=ArtiInt(record,0x18);assert(index>=0 && index<int(items.size()));memcpy(static_cast<unsigned char*>(items[index])+0x10,static_cast<unsigned char*>(record)+0x10,0x16);}
 }
 __declspec(noinline) void* ArtiSaveStatesFixture(void* self,const void* method){assert(self==artiOwner);artiMethodSeen=method;artiCaller=reinterpret_cast<uintptr_t>(_ReturnAddress());return self;}
 __declspec(noinline) void ArtiCaptureFixture(void* self,const void* method){ArtifactList volatile capture=ArtiSaveStatesFixture;assert(capture(self,method)==self);}
 __declspec(noinline) void ArtiAutoSaveFixture(void* self,void* scene,const void* method) {
-    assert(self==artiController && scene);void* container=nullptr;assert(Field(self,0x28,container));Put(container,0x1cd8,ArtiInt(artiOwner,0xb0));
-    ArtiCaptureFixture(artiOwner,method);artiFileMetadata=ArtiInt(container,0x1cd8);
+    assert(self==artiController && scene);void* container=nullptr;assert(Field(self,0x28,container));Put(container,0x1ce8,ArtiInt(artiOwner,0xb0));
+    ArtiCaptureFixture(artiOwner,method);artiFileMetadata=ArtiInt(container,0x1ce8);
 }
 void ArtiPreviewFixture(void* self,const void*) {
-    void* container=nullptr;assert(Field(artiController,0x28,container));artiPreviewValue=ArtiInt(container,0x1cd8);
+    void* container=nullptr;assert(Field(artiController,0x28,container));artiPreviewValue=ArtiInt(container,0x1ce8);
     if(!self)return;void* pool=nullptr;void* saved=nullptr;std::vector<void*> images,records;
-    assert(Field(self,0xb0,pool)&&ManagedItems(pool,images)&&Field(container,0x1cd0,saved)&&ManagedItems(saved,records));
+    assert(Field(self,0xb0,pool)&&ManagedItems(pool,images)&&Field(container,0x1ce0,saved)&&ManagedItems(saved,records));
     for(void* image:images)Put(image,0x8c,-1);
     for(void* record:records){int index=ArtiInt(record,0x18);if(index>=0&&index<int(images.size()))Put(images[index],0x8c,ArtiInt(record,0x14));}
 }
@@ -241,18 +241,18 @@ void ArtifactTests(ds::Shared& data,const void* method) {
     // Capture an original seven-slot bonus capability without losing it on save.
     artifactTracking.nativeAllowed=7;expanded=ArtiItems(owner);Put(expanded[19],0x14,888);Put(expanded[19],0x1c,5);
     void* container=ArtiObject(0x98);void* saved=ArtiList();for(void* item:expanded)if(ArtiInt(item,0x14)>=0){void* copy=ArtiObject(ArtiItemClass);memcpy(static_cast<unsigned char*>(copy)+0x10,static_cast<unsigned char*>(item)+0x10,0x16);ArtiAdd(saved,copy);}
-    Put(container,0x1cd0,saved);artiController=ArtiObject(0x99);Put(artiController,0x28,container);
+    Put(container,0x1ce0,saved);artiController=ArtiObject(0x99);Put(artiController,0x28,container);
     int scene=12;save(artiController,&scene,method);int physical=0,native=0;
-    assert(ds::artifacts::LoadCapacity(artiFileMetadata,physical,native) && physical==20 && native==7 && ArtiInt(container,0x1cd8)==20);
+    assert(ds::artifacts::LoadCapacity(artiFileMetadata,physical,native) && physical==20 && native==7 && ArtiInt(container,0x1ce8)==20);
     void* previewPanel=ArtiObject(0x97);void* previewParent=ArtiObject(ArtiRectClass);void* previewGame=ArtiObject(0x94);Put(previewParent,0x40,previewGame);
     memcpy(static_cast<unsigned char*>(previewParent)+0x100,rect,sizeof(rect));void* previewPool=ArtiList();
     for(int i=0;i<7;++i)ArtiAdd(previewPool,ArtiPreviewImage(previewParent));Put(previewPanel,0xb0,previewPool);
     originalLoadPreview=ArtiPreviewFixture;OnLoadPreview(previewPanel,method);std::vector<void*> previewImages;
-    assert(artiPreviewValue==7 && ArtiInt(container,0x1cd8)==20 && ManagedItems(previewPool,previewImages) && previewImages.size()==20 && ArtiInt(previewImages[19],0x8c)==888);
+    assert(artiPreviewValue==7 && ArtiInt(container,0x1ce8)==20 && ManagedItems(previewPool,previewImages) && previewImages.size()==20 && ArtiInt(previewImages[19],0x8c)==888);
     float previewSize=0;assert(Field(ArtiTransform(previewImages[19],nullptr),0x140,previewSize)&&std::abs(previewSize-ds::artifacts::FitGrid(500,180,20).cell)<.01f);
-    Put(container,0x1cd8,artiFileMetadata);OnLoadPreview(previewPanel,method);
-    assert(artiPreviewValue==7 && ArtiInt(container,0x1cd8)==artiFileMetadata && previewImages.size()==20);
-    Put(container,0x1cd8,20);
+    Put(container,0x1ce8,artiFileMetadata);OnLoadPreview(previewPanel,method);
+    assert(artiPreviewValue==7 && ArtiInt(container,0x1ce8)==artiFileMetadata && previewImages.size()==20);
+    Put(container,0x1ce8,20);
     ds::Disable(&data);void* newOwner=ArtiSetup();load(newOwner,container,method);
     assert(artiLoads==1 && artiLoadMethod==method && ArtiInt(newOwner,0xac)==20 && data.artifactStatus==2 && artifactTracking.nativeAllowed==7);
     auto loaded=ArtiItems(newOwner);assert(ArtiInt(loaded[19],0x14)==888 && ArtiInt(loaded[19],0x1c)==5 && ArtiInt(loaded[20],0x14)==200);
@@ -261,25 +261,25 @@ void ArtifactTests(ds::Shared& data,const void* method) {
     // slot must also survive with every feature switch disabled.
     artifactSaveHint.Reset();void* bonusSave=ArtiObject(0x98);void* bonusRecords=ArtiList();
     void* bonusItem=ArtiObject(ArtiItemClass);Put(bonusItem,0x18,6);Put(bonusItem,0x14,666);ArtiAdd(bonusRecords,bonusItem);
-    Put(bonusSave,0x1cd0,bonusRecords);int bonusTag=ds::artifacts::SaveCapacity(7,6);Put(bonusSave,0x1cd8,bonusTag);Put(artiController,0x28,bonusSave);
-    originalLoadPreview=ArtiPreviewFixture;OnLoadPreview(nullptr,method);assert(artiPreviewValue==7 && ArtiInt(bonusSave,0x1cd8)==bonusTag);
+    Put(bonusSave,0x1ce0,bonusRecords);int bonusTag=ds::artifacts::SaveCapacity(7,6);Put(bonusSave,0x1ce8,bonusTag);Put(artiController,0x28,bonusSave);
+    originalLoadPreview=ArtiPreviewFixture;OnLoadPreview(nullptr,method);assert(artiPreviewValue==7 && ArtiInt(bonusSave,0x1ce8)==bonusTag);
     void* bonusOwner=ArtiSetup();load(bonusOwner,bonusSave,method);
     assert(data.artifactStatus==2 && ArtiInt(bonusOwner,0xb0)==7 && ArtiInt(ArtiItems(bonusOwner)[6],0x14)==666 && artifactTracking.nativeAllowed==6);
     data.clientHeartbeat=LONG(GetTickCount()-4000);frame(bonusOwner,method);assert(data.artifactStatus==2 && ArtiInt(bonusOwner,0xb0)==7);
     data.clientHeartbeat=LONG(GetTickCount());Put(ArtiItems(bonusOwner)[6],0x14,-1);frame(bonusOwner,method);assert(ArtiInt(bonusOwner,0xb0)==6 && data.artifactStatus==0);
     for(int base:{6,7}) {
-        Put(bonusSave,0x1cd8,base);Put(bonusSave,0x1cd0,ArtiList());load(bonusOwner,bonusSave,method);
+        Put(bonusSave,0x1ce8,base);Put(bonusSave,0x1ce0,ArtiList());load(bonusOwner,bonusSave,method);
         assert(ArtiInt(bonusOwner,0xb0)==base && artifactTracking.nativeAllowed==base && data.artifactStatus==0);
         OnLoadPreview(previewPanel,method);assert(artiPreviewValue==base && ManagedItems(previewPool,previewImages) && previewImages.size()==7);
         assert(Field(ArtiTransform(previewImages[0],nullptr),0x140,previewSize)&&previewSize==90);
     }
     // Reject broken tags and impossible saved indices before native indexed
     // loading. Do not let a partial resume overwrite the original autosave.
-    int loadsBefore=artiLoads;int previousFile=artiFileMetadata;Put(bonusSave,0x1cd8,0x4453ff06);load(bonusOwner,bonusSave,method);
+    int loadsBefore=artiLoads;int previousFile=artiFileMetadata;Put(bonusSave,0x1ce8,0x4453ff06);load(bonusOwner,bonusSave,method);
     assert(artiLoads==loadsBefore && artifactLoadFailed && data.artifactStatus==-2);save(artiController,&scene,method);assert(artiFileMetadata==previousFile);
-    Put(bonusSave,0x1cd8,ds::artifacts::SaveCapacity(30,6));artiAllocationLimit=1;load(bonusOwner,bonusSave,method);
+    Put(bonusSave,0x1ce8,ds::artifacts::SaveCapacity(30,6));artiAllocationLimit=1;load(bonusOwner,bonusSave,method);
     assert(artiLoads==loadsBefore && artifactLoadFailed);artiAllocationLimit=-1;
-    Put(bonusItem,0x18,99);Put(bonusSave,0x1cd0,bonusRecords);load(bonusOwner,bonusSave,method);assert(artiLoads==loadsBefore && artifactLoadFailed);
+    Put(bonusItem,0x18,99);Put(bonusSave,0x1ce0,bonusRecords);load(bonusOwner,bonusSave,method);assert(artiLoads==loadsBefore && artifactLoadFailed);
     Put(bonusItem,0x18,29);load(bonusOwner,bonusSave,method);assert(artiLoads==loadsBefore+1 && !artifactLoadFailed && data.artifactStatus==2 && ArtiInt(ArtiItems(bonusOwner)[29],0x14)==666);
     originalArtifactReset=ArtiResetFixture;OnArtifactReset(bonusOwner,method);assert(!artifactLoadFailed && ArtiInt(bonusOwner,0xac)==7 && ArtiInt(bonusOwner,0xb0)==6);
     // The last equipment slot and its preview must survive a real resume;
@@ -288,9 +288,9 @@ void ArtifactTests(ds::Shared& data,const void* method) {
     assert(ApplyArtifactCapacity(bonusOwner) && ArtiInt(bonusOwner,0xac)==50 && ArtiItems(bonusOwner).size()==63);
     auto fifty=ArtiItems(bonusOwner);Put(fifty[49],0x14,749);Put(fifty[49],0x1c,7);
     OnEquipInit(panel,method);assert(ManagedItems(pool,boxes) && boxes.size()==50 && ArtiInt(boxes[49],0x90)==49);
-    Put(bonusItem,0x18,49);Put(bonusItem,0x14,749);Put(bonusItem,0x1c,7);Put(bonusSave,0x1cd0,bonusRecords);Put(bonusSave,0x1cd8,50);
+    Put(bonusItem,0x18,49);Put(bonusItem,0x14,749);Put(bonusItem,0x1c,7);Put(bonusSave,0x1ce0,bonusRecords);Put(bonusSave,0x1ce8,50);
     StampArtifactSave(bonusOwner,bonusSave);artifactSaveHint.Reset();
-    assert(ds::artifacts::LoadCapacity(ArtiInt(bonusSave,0x1cd8),physical,native) && physical==50 && native==6);
+    assert(ds::artifacts::LoadCapacity(ArtiInt(bonusSave,0x1ce8),physical,native) && physical==50 && native==6);
     OnLoadPreview(previewPanel,method);assert(ManagedItems(previewPool,previewImages) && previewImages.size()==50 && ArtiInt(previewImages[49],0x8c)==749);
     ds::Disable(&data);void* fiftyOwner=ArtiSetup();load(fiftyOwner,bonusSave,method);
     assert(!artifactLoadFailed && data.artifactStatus==2 && ArtiInt(fiftyOwner,0xac)==50 && ArtiInt(ArtiItems(fiftyOwner)[49],0x1c)==7);

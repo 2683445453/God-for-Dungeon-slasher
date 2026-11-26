@@ -1,5 +1,5 @@
-DUNGEON SLASHER 修改器 r26
-适配 Steam Build 26725751，Windows x64 / D3D11
+DUNGEON SLASHER 修改器 r27
+适配 Steam Build 26917845，Windows x64 / D3D11
 
 功能
 - 战斗：无敌；伤害倍率 0.1–1000；普通技能、增益技能和武器技能无冷却。

@@ -1,8 +1,8 @@
 # God for DUNGEON SLASHER
 
-《DUNGEON SLASHER》Windows Steam 版中文修改器。当前版本 **r26**，适配 **Steam Build 26725751**。
+《DUNGEON SLASHER》Windows Steam 版中文修改器。当前版本 **r27**，适配 **Steam Build 26917845**。
 
-[下载最新版本](https://github.com/2683445453/God-for-Dungeon-slasher/releases/latest) · [r26 发布说明](https://github.com/2683445453/God-for-Dungeon-slasher/releases/tag/r26)
+[下载最新版本](https://github.com/2683445453/God-for-Dungeon-slasher/releases/latest) · [r27 发布说明](https://github.com/2683445453/God-for-Dungeon-slasher/releases/tag/r27)
 
 启动游戏进入主菜单后运行 `DungeonSlasherTrainer.exe`，启动器完成校验、备份和注入后自动退出。功能和设置保存在游戏内，面板复用游戏原生字体、灰色／黄色按钮、像素边框和勾选图案，使用左侧分类与右侧功能列表，并随游戏分辨率调整字号和尺寸。
 
@@ -32,7 +32,7 @@ python -m pip install UnityPy==1.25.4
 ./build.ps1 -GameDirectory 'D:\SteamLibrary\steamapps\common\DUNGEON SLASHER'
 ```
 
-生成文件位于 `dist/dungeon-slasher-r26`，压缩包为 `dist/dungeon-slasher-r26.zip`。构建时从本机安装的游戏中提取原生界面资源到 `native-ui.bin`；资源不进入源码。源码构建可使用 `-SkipGameCheck`，没有本地资源缓存时使用备用样式。
+生成文件位于 `dist/dungeon-slasher-r27`，压缩包为 `dist/dungeon-slasher-r27.zip`。构建时从本机安装的游戏中提取原生界面资源到 `native-ui.bin`；资源不进入源码。源码构建可使用 `-SkipGameCheck`，没有本地资源缓存时使用备用样式。
 
 [更新日志](CHANGELOG.md) · [功能说明](docs/使用说明.txt) · [发布指南](docs/RELEASING.md)
 
